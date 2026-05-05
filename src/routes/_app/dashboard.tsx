@@ -188,6 +188,30 @@ function Dashboard() {
               {ar ? "مسح" : "Clear"}
             </Button>
           )}
+          <Button
+            size="sm"
+            onClick={() =>
+              exportDashboardPdf({
+                generatedAt: new Date(),
+                filters: {
+                  region: regionFilter === "all" ? (ar ? "كل المناطق" : "All") : regionFilter,
+                  branch: branchFilter === "all" ? (ar ? "كل الفروع" : "All") : branchFilter,
+                },
+                fillRate,
+                kpis: kpis.map((k) => ({ label: k.label, value: k.value, sub: k.sub })),
+                byRegion: stats.byRegion,
+                byRole: stats.byRole,
+                totals: {
+                  headcount: stats.totalHeadcount,
+                  hired: stats.totalHired,
+                  open: stats.open,
+                },
+              })
+            }
+          >
+            <Download className="h-4 w-4 mr-1" />
+            {ar ? "تصدير PDF" : "Export PDF"}
+          </Button>
         </div>
       </div>
       <Card className="glass shadow-elegant overflow-hidden relative">
