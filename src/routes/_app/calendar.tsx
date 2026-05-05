@@ -91,6 +91,53 @@ function CalendarPage() {
         notes: noteBlock,
       });
       if (error) throw error;
+
+      // Send the candidate an email invite. Recruiter is BCC'd so the
+      // candidate never sees the recruiter's address.
+      if (cand.email) {
+        try {
+          const subject =
+            lang === "ar"
+              ? `دعوة مقابلة · ${form.committee_name}`
+              : `Interview invitation · ${form.committee_name}`;
+          const lines =
+            lang === "ar"
+              ? [
+                  `مرحباً ${cand.full_name}،`,
+                  ``,
+                  `تمت دعوتك لمقابلة مع ${form.committee_name} (${regionLabel(form.region, "ar")}).`,
+                  `التاريخ: ${form.scheduled_date}  الوقت: ${form.scheduled_time}  المدة: ${form.duration_minutes} دقيقة`,
+                  ``,
+                  `رابط Google Meet: ${out.meet_link ?? "—"}`,
+                  `رابط الحدث: ${out.html_link}`,
+                  form.notes ? `\nملاحظات:\n${form.notes}` : "",
+                ]
+              : [
+                  `Hi ${cand.full_name},`,
+                  ``,
+                  `You have been invited to an interview with ${form.committee_name} (${regionLabel(form.region, "en")}).`,
+                  `Date: ${form.scheduled_date}  Time: ${form.scheduled_time}  Duration: ${form.duration_minutes} min`,
+                  ``,
+                  `Google Meet: ${out.meet_link ?? "—"}`,
+                  `Event: ${out.html_link}`,
+                  form.notes ? `\nNotes:\n${form.notes}` : "",
+                ];
+          await sendInvite({
+            data: {
+              to: cand.email,
+              bcc: user?.email ?? null,
+              subject,
+              body: lines.join("\n"),
+            },
+          });
+        } catch (mailErr) {
+          console.error("invite email failed", mailErr);
+          toast.warning(
+            lang === "ar" ? "تم الجدول، لكن فشل إرسال البريد" : "Scheduled, but email failed",
+          );
+        }
+      }
+
       toast.success(
         lang === "ar" ? "تم إنشاء المقابلة وإرسال رابط Google Meet" : "Interview scheduled · Google Meet link sent",
       );
