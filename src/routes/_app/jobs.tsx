@@ -370,12 +370,20 @@ function JobsPage() {
           ) : !allJobs.length ? (
             <Card className="p-6 text-muted-foreground">{t("noData")}</Card>
           ) : !filteredJobs.length ? (
-            <Card className="p-10 text-center text-muted-foreground space-y-3">
-              <div>{t("noMatches")}</div>
-              <Button variant="outline" size="sm" onClick={clearAll}>
-                {t("clearFilters")}
-              </Button>
-            </Card>
+            <EmptyMatches
+              ar={ar}
+              allJobs={allJobs}
+              search={debouncedSearch}
+              statuses={statuses}
+              priorities={priorities}
+              region={tab}
+              onClearAll={clearAll}
+              onClearSearch={() => setSearch("")}
+              onClearStatuses={() => setStatuses(new Set())}
+              onClearPriorities={() => setPriorities(new Set())}
+              onClearRegion={() => setTab("all")}
+              onPickJob={setSelectedJob}
+            />
           ) : sortBy !== "default" ? (
             (() => {
               const flat = sortedJobs.filter((j) => tab === "all" || j.region === tab);
@@ -796,5 +804,209 @@ function SortableTh({
         </span>
       </button>
     </th>
+  );
+}
+
+function EmptyMatches({
+  ar, allJobs, search, statuses, priorities, region,
+  onClearAll, onClearSearch, onClearStatuses, onClearPriorities, onClearRegion, onPickJob,
+}: {
+  ar: boolean;
+  allJobs: Job[];
+  search: string;
+  statuses: Set<string>;
+  priorities: Set<string>;
+  region: string;
+  onClearAll: () => void;
+  onClearSearch: () => void;
+  onClearStatuses: () => void;
+  onClearPriorities: () => void;
+  onClearRegion: () => void;
+  onPickJob: (j: Job) => void;
+}) {
+  const active: { label: string; value: string; clear: () => void }[] = [];
+  if (search) active.push({ label: ar ? "بحث" : "Search", value: `"${search}"`, clear: onClearSearch });
+  if (statuses.size) active.push({ label: ar ? "الحالة" : "Status", value: [...statuses].join(", "), clear: onClearStatuses });
+  if (priorities.size) active.push({ label: ar ? "الأولوية" : "Priority", value: [...priorities].join(", "), clear: onClearPriorities });
+  if (region !== "all") active.push({ label: ar ? "المنطقة" : "Region", value: region, clear: onClearRegion });
+
+  // Build alternative suggestions by relaxing one filter at a time
+  const matchExceptSearch = (j: Job) =>
+    (!statuses.size || statuses.has(j.status)) &&
+    (!priorities.size || priorities.has(j.priority)) &&
+    (region === "all" || j.region === region);
+
+  const suggestions: { label: string; jobs: Job[]; apply: () => void }[] = [];
+
+  if (search) {
+    const drop = allJobs.filter(matchExceptSearch).slice(0, 5);
+    if (drop.length) suggestions.push({
+      label: ar ? `إزالة البحث "${search}"` : `Drop search "${search}"`,
+      jobs: drop, apply: onClearSearch,
+    });
+  }
+  if (region !== "all") {
+    const drop = allJobs.filter((j) =>
+      (!statuses.size || statuses.has(j.status)) &&
+      (!priorities.size || priorities.has(j.priority)) &&
+      (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
+    ).slice(0, 5);
+    if (drop.length) suggestions.push({
+      label: ar ? `جميع المناطق` : `All regions`,
+      jobs: drop, apply: onClearRegion,
+    });
+  }
+  if (statuses.size) {
+    const drop = allJobs.filter((j) =>
+      (!priorities.size || priorities.has(j.priority)) &&
+      (region === "all" || j.region === region) &&
+      (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
+    ).slice(0, 5);
+    if (drop.length) suggestions.push({
+      label: ar ? "تجاهل فلتر الحالة" : "Ignore status filter",
+      jobs: drop, apply: onClearStatuses,
+    });
+  }
+  if (priorities.size) {
+    const drop = allJobs.filter((j) =>
+      (!statuses.size || statuses.has(j.status)) &&
+      (region === "all" || j.region === region) &&
+      (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
+    ).slice(0, 5);
+    if (drop.length) suggestions.push({
+      label: ar ? "تجاهل فلتر الأولوية" : "Ignore priority filter",
+      jobs: drop, apply: onClearPriorities,
+    });
+  }
+
+  // Fuzzy title suggestions when search is active
+  let fuzzy: Job[] = [];
+  if (search && search.length >= 2) {
+    const q = search;
+    fuzzy = allJobs
+      .map((j) => {
+        const hay = `${j.title} ${j.job_code}`.toLowerCase();
+        let score = 0;
+        if (hay.includes(q)) score = 100;
+        else {
+          // token overlap
+          const tokens = q.split(/\s+/).filter(Boolean);
+          score = tokens.reduce((s, t) => s + (hay.includes(t) ? 1 : 0), 0);
+        }
+        return { j, score };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map((x) => x.j);
+  }
+
+  return (
+    <Card className="glass shadow-elegant p-8 space-y-6">
+      <div className="text-center space-y-2">
+        <div className="text-lg font-semibold">
+          {ar ? "لا توجد وظائف مطابقة" : "No matching jobs"}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {ar
+            ? "لم نعثر على نتائج تطابق الفلاتر الحالية. جرّب تعديلها أو استخدم أحد الاقتراحات أدناه."
+            : "No results match the current filters. Try adjusting them or use one of the suggestions below."}
+        </p>
+      </div>
+
+      {active.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            {ar ? "الفلاتر النشطة" : "Active filters"}
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {active.map((f, i) => (
+              <Badge key={i} variant="secondary" className="gap-1.5 py-1 px-2">
+                <span className="text-muted-foreground">{f.label}:</span>
+                <span className="font-medium">{f.value}</span>
+                <button
+                  onClick={f.clear}
+                  className="ms-1 rounded hover:bg-background/50 p-0.5"
+                  aria-label="remove"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+            <Button variant="ghost" size="sm" onClick={onClearAll} className="h-6 px-2 text-xs">
+              {ar ? "إزالة الكل" : "Clear all"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {fuzzy.length > 0 && (
+        <SuggestionBlock
+          title={ar ? "هل تقصد؟" : "Did you mean?"}
+          jobs={fuzzy}
+          ar={ar}
+          onPickJob={onPickJob}
+        />
+      )}
+
+      {suggestions.map((s, i) => (
+        <div key={i} className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              {ar ? "اقتراح" : "Suggestion"}
+            </div>
+            <Button variant="link" size="sm" onClick={s.apply} className="h-6 p-0 text-xs">
+              {s.label} →
+            </Button>
+          </div>
+          <SuggestionList jobs={s.jobs} onPickJob={onPickJob} />
+        </div>
+      ))}
+
+      {!suggestions.length && !fuzzy.length && (
+        <div className="text-center">
+          <Button variant="outline" size="sm" onClick={onClearAll}>
+            {ar ? "إزالة جميع الفلاتر" : "Clear all filters"}
+          </Button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function SuggestionBlock({
+  title, jobs, ar, onPickJob,
+}: { title: string; jobs: Job[]; ar: boolean; onPickJob: (j: Job) => void }) {
+  return (
+    <div className="space-y-2">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{title}</div>
+      <SuggestionList jobs={jobs} onPickJob={onPickJob} />
+    </div>
+  );
+}
+
+function SuggestionList({ jobs, onPickJob }: { jobs: Job[]; onPickJob: (j: Job) => void }) {
+  return (
+    <ul className="divide-y divide-border rounded-md border border-border overflow-hidden">
+      {jobs.map((j) => (
+        <li key={j.id}>
+          <button
+            onClick={() => onPickJob(j)}
+            className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-muted/40 text-start"
+          >
+            <span className="flex items-center gap-2 min-w-0">
+              <span className="font-mono text-xs text-muted-foreground shrink-0">{j.job_code}</span>
+              <span className="truncate">{j.title}</span>
+            </span>
+            <span className="flex items-center gap-2 shrink-0">
+              <Badge variant="outline" className="text-xs">{j.region}</Badge>
+              <Badge variant={j.priority === "High" ? "destructive" : "outline"} className="text-xs">
+                {j.priority}
+              </Badge>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
