@@ -5,6 +5,86 @@ import mammoth from "mammoth";
 const DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+// ---------- Circuit Breaker ----------
+type BreakerState = "CLOSED" | "OPEN" | "HALF_OPEN";
+const BREAKER = {
+  state: "CLOSED" as BreakerState,
+  failures: 0,
+  openedAt: 0,
+  lastError: "" as string,
+  // tunables
+  FAILURE_THRESHOLD: 3,
+  COOLDOWN_MS: 30_000,
+};
+
+function breakerSnapshot() {
+  const now = Date.now();
+  const cooldownRemainingMs =
+    BREAKER.state === "OPEN"
+      ? Math.max(0, BREAKER.COOLDOWN_MS - (now - BREAKER.openedAt))
+      : 0;
+  return {
+    state: BREAKER.state,
+    failures: BREAKER.failures,
+    cooldownRemainingMs,
+    lastError: BREAKER.lastError || undefined,
+  };
+}
+
+function shouldShortCircuit(): boolean {
+  if (BREAKER.state !== "OPEN") return false;
+  if (Date.now() - BREAKER.openedAt >= BREAKER.COOLDOWN_MS) {
+    BREAKER.state = "HALF_OPEN";
+    console.log("[breaker] cooldown elapsed → HALF_OPEN (probing)");
+    return false;
+  }
+  return true;
+}
+
+function isTransientStatus(status: number) {
+  return status === 502 || status === 503 || status === 504;
+}
+
+function recordSuccess() {
+  if (BREAKER.state !== "CLOSED") {
+    console.log(`[breaker] ${BREAKER.state} → CLOSED (probe ok)`);
+  }
+  BREAKER.state = "CLOSED";
+  BREAKER.failures = 0;
+  BREAKER.lastError = "";
+}
+
+function recordFailure(reason: string) {
+  BREAKER.lastError = reason.slice(0, 300);
+  if (BREAKER.state === "HALF_OPEN") {
+    BREAKER.state = "OPEN";
+    BREAKER.openedAt = Date.now();
+    console.warn(`[breaker] HALF_OPEN probe failed → OPEN for ${BREAKER.COOLDOWN_MS}ms`);
+    return;
+  }
+  BREAKER.failures += 1;
+  if (BREAKER.failures >= BREAKER.FAILURE_THRESHOLD) {
+    BREAKER.state = "OPEN";
+    BREAKER.openedAt = Date.now();
+    console.warn(
+      `[breaker] threshold ${BREAKER.failures}/${BREAKER.FAILURE_THRESHOLD} reached → OPEN for ${BREAKER.COOLDOWN_MS}ms`
+    );
+  }
+}
+
+class CircuitOpenError extends Error {
+  cooldownRemainingMs: number;
+  constructor(cooldownRemainingMs: number, lastError?: string) {
+    super(
+      `CIRCUIT_OPEN: Drive gateway temporarily disabled (retry in ${Math.ceil(
+        cooldownRemainingMs / 1000
+      )}s)${lastError ? ` — last error: ${lastError}` : ""}`
+    );
+    this.name = "CircuitOpenError";
+    this.cooldownRemainingMs = cooldownRemainingMs;
+  }
+}
+
 function driveHeaders() {
   const lov = process.env.LOVABLE_API_KEY;
   const gd = process.env.GOOGLE_DRIVE_API_KEY;
@@ -16,22 +96,49 @@ function driveHeaders() {
   };
 }
 
-export async function checkDriveGateway(): Promise<{ ok: boolean; status?: number; latencyMs: number; error?: string }> {
+export async function checkDriveGateway(): Promise<{
+  ok: boolean;
+  status?: number;
+  latencyMs: number;
+  error?: string;
+  breaker: ReturnType<typeof breakerSnapshot>;
+}> {
   const t0 = Date.now();
+  // If breaker is OPEN, short-circuit without hitting the gateway.
+  if (shouldShortCircuit()) {
+    const snap = breakerSnapshot();
+    return {
+      ok: false,
+      latencyMs: 0,
+      error: `Circuit open — retry in ${Math.ceil(snap.cooldownRemainingMs / 1000)}s`,
+      breaker: snap,
+    };
+  }
   try {
     const headers = driveHeaders();
-    // Lightweight call: list 1 file from root. Uses gateway + connector creds.
     const url = `${DRIVE_GATEWAY}/files?pageSize=1&fields=files(id)`;
     const res = await fetch(url, { headers });
     const latencyMs = Date.now() - t0;
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      return { ok: false, status: res.status, latencyMs, error: body.slice(0, 300) || `HTTP ${res.status}` };
+      const err = body.slice(0, 300) || `HTTP ${res.status}`;
+      if (isTransientStatus(res.status)) recordFailure(err);
+      else recordSuccess(); // non-transient (e.g. 401/403/404) — gateway is up
+      return { ok: false, status: res.status, latencyMs, error: err, breaker: breakerSnapshot() };
     }
-    return { ok: true, status: res.status, latencyMs };
+    recordSuccess();
+    return { ok: true, status: res.status, latencyMs, breaker: breakerSnapshot() };
   } catch (err) {
-    return { ok: false, latencyMs: Date.now() - t0, error: (err as Error).message };
+    const msg = (err as Error).message;
+    recordFailure(msg);
+    return { ok: false, latencyMs: Date.now() - t0, error: msg, breaker: breakerSnapshot() };
   }
+}
+
+export function getDriveBreakerState() {
+  // Refresh state if cooldown elapsed
+  shouldShortCircuit();
+  return breakerSnapshot();
 }
 
 export function parseDriveLink(input: string): { kind: "folder" | "file"; id: string } | null {
@@ -48,7 +155,15 @@ export function parseDriveLink(input: string): { kind: "folder" | "file"; id: st
 export type DriveFile = { id: string; name: string; mimeType: string; size?: string };
 
 async function fetchWithRetry(url: string, init: RequestInit, label: string): Promise<Response> {
-  const MAX = 4;
+  // Circuit breaker short-circuit
+  if (shouldShortCircuit()) {
+    const snap = breakerSnapshot();
+    console.warn(`[${label}] short-circuited by breaker (cooldown ${snap.cooldownRemainingMs}ms)`);
+    throw new CircuitOpenError(snap.cooldownRemainingMs, snap.lastError);
+  }
+  // In HALF_OPEN we only allow a single probe attempt
+  const isProbe = BREAKER.state === "HALF_OPEN";
+  const MAX = isProbe ? 1 : 4;
   let lastErr: unknown;
   let lastStatus: number | undefined;
   let lastBody: string | undefined;
@@ -58,17 +173,23 @@ async function fetchWithRetry(url: string, init: RequestInit, label: string): Pr
   for (let attempt = 1; attempt <= MAX; attempt++) {
     const t0 = Date.now();
     try {
-      console.log(`[${label}] attempt ${attempt}/${MAX} → ${url} (auth=${hasAuth}, connKey=${hasConnKey})`);
+      console.log(`[${label}] attempt ${attempt}/${MAX} → ${url} (auth=${hasAuth}, connKey=${hasConnKey}, probe=${isProbe})`);
       const res = await fetch(url, init);
       const dur = Date.now() - t0;
       lastStatus = res.status;
-      if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt < MAX) {
+      if (isTransientStatus(res.status) && attempt < MAX) {
         lastBody = await res.clone().text().catch(() => "<unreadable>");
         console.warn(`[${label}] attempt ${attempt} transient ${res.status} in ${dur}ms — body: ${lastBody?.slice(0, 300)}`);
         await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
         continue;
       }
       console.log(`[${label}] attempt ${attempt} done status=${res.status} in ${dur}ms`);
+      // Feed breaker
+      if (isTransientStatus(res.status)) {
+        recordFailure(`HTTP ${res.status}`);
+      } else {
+        recordSuccess();
+      }
       return res;
     } catch (err) {
       const dur = Date.now() - t0;
@@ -84,6 +205,7 @@ async function fetchWithRetry(url: string, init: RequestInit, label: string): Pr
     ? `network error: ${(lastErr as Error)?.message ?? "unknown"}`
     : `last status ${lastStatus}: ${lastBody?.slice(0, 300) ?? ""}`;
   console.error(`[${label}] FAILED after ${MAX} attempts — url=${url}, auth=${hasAuth}, connKey=${hasConnKey}, ${reason}`);
+  recordFailure(reason);
   throw new Error(`${label} ${reason}`);
 }
 

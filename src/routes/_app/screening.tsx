@@ -27,8 +27,16 @@ function ScreeningPage() {
   const [results, setResults] = useState<IngestResult[]>([]);
   const [summary, setSummary] = useState<{ total: number; skipped: number } | null>(null);
   const [authError, setAuthError] = useState(false);
+  type Breaker = { state: "CLOSED" | "OPEN" | "HALF_OPEN"; failures: number; cooldownRemainingMs: number; lastError?: string };
   const [driveHealth, setDriveHealth] = useState<
-    { ok: boolean; status?: number; latencyMs: number; error?: string; checkedAt: number } | null
+    {
+      ok: boolean;
+      status?: number;
+      latencyMs: number;
+      error?: string;
+      breaker?: Breaker;
+      checkedAt: number;
+    } | null
   >(null);
   const [healthChecking, setHealthChecking] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -120,6 +128,17 @@ function ScreeningPage() {
           setRunning(false);
           setAttempt(0);
           return;
+        }
+        // Stop retrying if circuit is open — pointless to keep hammering
+        if (/CIRCUIT_OPEN/i.test(lastMsg)) {
+          toast.error(
+            lang === "ar"
+              ? "تم إيقاف المحاولات مؤقتاً (Circuit Breaker). انتظر قليلاً ثم أعد المحاولة."
+              : "Retries stopped (Circuit Breaker open). Please wait a moment and try again."
+          );
+          // Refresh health to surface cooldown
+          runHealthCheck();
+          break;
         }
         if (i < MAX && isTransient(lastMsg)) {
           const delay = 800 * 2 ** (i - 1);
@@ -234,7 +253,21 @@ function ScreeningPage() {
                 <div className="text-xs text-muted-foreground mt-0.5">
                   {driveHealth.status ? `HTTP ${driveHealth.status} — ` : ""}
                   {driveHealth.error}
-                </div>
+                {driveHealth.breaker && driveHealth.breaker.state !== "CLOSED" && (
+                  <div className="text-xs mt-1">
+                    <Badge variant="outline" className="me-2">
+                      {driveHealth.breaker.state}
+                    </Badge>
+                    {driveHealth.breaker.state === "OPEN"
+                      ? lang === "ar"
+                        ? `إعادة المحاولة تلقائياً خلال ${Math.ceil(driveHealth.breaker.cooldownRemainingMs / 1000)} ثانية`
+                        : `Auto-retry in ${Math.ceil(driveHealth.breaker.cooldownRemainingMs / 1000)}s`
+                      : lang === "ar"
+                        ? "جارٍ اختبار التعافي..."
+                        : "Probing recovery..."}
+                  </div>
+                )}
+              </div>
               </div>
             )}
           </div>
