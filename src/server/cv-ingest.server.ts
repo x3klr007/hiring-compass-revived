@@ -29,10 +29,32 @@ export function parseDriveLink(input: string): { kind: "folder" | "file"; id: st
 
 export type DriveFile = { id: string; name: string; mimeType: string; size?: string };
 
+async function fetchWithRetry(url: string, init: RequestInit, label: string): Promise<Response> {
+  const MAX = 4;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt < MAX) {
+        await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX) {
+        await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
+        continue;
+      }
+    }
+  }
+  throw new Error(`${label} network error: ${(lastErr as Error)?.message ?? "unknown"}`);
+}
+
 export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
   const url = `${DRIVE_GATEWAY}/files?q=${q}&fields=files(id,name,mimeType,size)&pageSize=200`;
-  const res = await fetch(url, { headers: driveHeaders() });
+  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list");
   if (!res.ok) throw new Error(`Drive list failed [${res.status}]: ${await res.text()}`);
   const json = (await res.json()) as { files?: DriveFile[] };
   return json.files ?? [];
@@ -40,14 +62,14 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
 
 export async function getDriveFileMeta(fileId: string): Promise<DriveFile> {
   const url = `${DRIVE_GATEWAY}/files/${fileId}?fields=id,name,mimeType,size`;
-  const res = await fetch(url, { headers: driveHeaders() });
+  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive meta");
   if (!res.ok) throw new Error(`Drive meta failed [${res.status}]: ${await res.text()}`);
   return (await res.json()) as DriveFile;
 }
 
 export async function downloadDriveFile(fileId: string): Promise<ArrayBuffer> {
   const url = `${DRIVE_GATEWAY}/files/${fileId}?alt=media`;
-  const res = await fetch(url, { headers: driveHeaders() });
+  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive download");
   if (!res.ok) throw new Error(`Drive download failed [${res.status}]: ${await res.text()}`);
   return await res.arrayBuffer();
 }
