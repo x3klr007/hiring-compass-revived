@@ -8,8 +8,15 @@ import {
   downloadDriveFile,
   extractTextFromBuffer,
   extractCandidateFromText,
+  checkDriveGateway,
   type ExtractedCV,
 } from "./cv-ingest.server";
+
+export const checkDriveHealth = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    return await checkDriveGateway();
+  });
 
 const SUPPORTED_MIME = [
   "application/pdf",

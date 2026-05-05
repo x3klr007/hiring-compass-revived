@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Link2, Loader2, CheckCircle2, AlertCircle, Folder } from "lucide-react";
-import { ingestFromDriveLink, type IngestResult } from "@/server/cv-ingest.functions";
+import { ingestFromDriveLink, checkDriveHealth, type IngestResult } from "@/server/cv-ingest.functions";
 import { REGIONS, regionLabel } from "@/lib/regions";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ type Job = { id: string; title: string; region: string };
 function ScreeningPage() {
   const { t, lang, dir } = useI18n();
   const ingest = useAuthedServerFn(ingestFromDriveLink);
+  const healthCheck = useAuthedServerFn(checkDriveHealth);
   const [link, setLink] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [defaultJobId, setDefaultJobId] = useState<string>("");
@@ -26,6 +27,10 @@ function ScreeningPage() {
   const [results, setResults] = useState<IngestResult[]>([]);
   const [summary, setSummary] = useState<{ total: number; skipped: number } | null>(null);
   const [authError, setAuthError] = useState(false);
+  const [driveHealth, setDriveHealth] = useState<
+    { ok: boolean; status?: number; latencyMs: number; error?: string; checkedAt: number } | null
+  >(null);
+  const [healthChecking, setHealthChecking] = useState(false);
 
   useEffect(() => {
     supabase
@@ -36,9 +41,41 @@ function ScreeningPage() {
       .then(({ data }) => setJobs((data ?? []) as Job[]));
   }, []);
 
+  const runHealthCheck = async () => {
+    setHealthChecking(true);
+    try {
+      const res = await healthCheck({});
+      setDriveHealth({ ...res, checkedAt: Date.now() });
+      return res;
+    } catch (err) {
+      const r = { ok: false, latencyMs: 0, error: (err as Error).message, checkedAt: Date.now() };
+      setDriveHealth(r);
+      return r;
+    } finally {
+      setHealthChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    runHealthCheck();
+    const id = setInterval(runHealthCheck, 60_000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onRun = async () => {
     if (!link.trim()) {
       toast.error(lang === "ar" ? "أدخل رابط Google Drive" : "Paste a Google Drive link");
+      return;
+    }
+    // Preflight health check
+    const health = await runHealthCheck();
+    if (!health.ok) {
+      toast.error(
+        lang === "ar"
+          ? "خدمة Google Drive غير متوفرة حالياً. حاول مرة أخرى بعد قليل."
+          : "Google Drive service is currently unavailable. Please try again shortly."
+      );
       return;
     }
     setRunning(true);
@@ -108,6 +145,50 @@ function ScreeningPage() {
         </Card>
       )}
 
+      {driveHealth && (
+        <Card
+          className={`glass p-3 flex items-center gap-3 text-sm ${
+            driveHealth.ok ? "border-emerald-500/40" : "border-destructive/50"
+          }`}
+        >
+          {driveHealth.ok ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+          )}
+          <div className="flex-1">
+            {driveHealth.ok ? (
+              <span className="text-muted-foreground">
+                {lang === "ar"
+                  ? `خدمة Google Drive متاحة (${driveHealth.latencyMs}ms)`
+                  : `Google Drive service is available (${driveHealth.latencyMs}ms)`}
+              </span>
+            ) : (
+              <div>
+                <div className="font-medium">
+                  {lang === "ar"
+                    ? "خدمة Google Drive غير متوفرة حالياً"
+                    : "Google Drive service is unavailable"}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {driveHealth.status ? `HTTP ${driveHealth.status} — ` : ""}
+                  {driveHealth.error}
+                </div>
+              </div>
+            )}
+          </div>
+          <Button size="sm" variant="outline" onClick={runHealthCheck} disabled={healthChecking}>
+            {healthChecking ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : lang === "ar" ? (
+              "إعادة الفحص"
+            ) : (
+              "Recheck"
+            )}
+          </Button>
+        </Card>
+      )}
+
       <Card className="glass shadow-elegant p-6 space-y-4">
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
@@ -169,7 +250,7 @@ function ScreeningPage() {
           </div>
         </div>
 
-        <Button onClick={onRun} disabled={running} size="lg" className="w-full md:w-auto">
+        <Button onClick={onRun} disabled={running || (driveHealth ? !driveHealth.ok : false)} size="lg" className="w-full md:w-auto">
           {running ? (
             <>
               <Loader2 className="me-2 h-4 w-4 animate-spin" />

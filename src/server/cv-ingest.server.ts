@@ -16,6 +16,24 @@ function driveHeaders() {
   };
 }
 
+export async function checkDriveGateway(): Promise<{ ok: boolean; status?: number; latencyMs: number; error?: string }> {
+  const t0 = Date.now();
+  try {
+    const headers = driveHeaders();
+    // Lightweight call: list 1 file from root. Uses gateway + connector creds.
+    const url = `${DRIVE_GATEWAY}/files?pageSize=1&fields=files(id)`;
+    const res = await fetch(url, { headers });
+    const latencyMs = Date.now() - t0;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, status: res.status, latencyMs, error: body.slice(0, 300) || `HTTP ${res.status}` };
+    }
+    return { ok: true, status: res.status, latencyMs };
+  } catch (err) {
+    return { ok: false, latencyMs: Date.now() - t0, error: (err as Error).message };
+  }
+}
+
 export function parseDriveLink(input: string): { kind: "folder" | "file"; id: string } | null {
   const folderMatch = input.match(/\/folders\/([a-zA-Z0-9_-]+)/);
   if (folderMatch) return { kind: "folder", id: folderMatch[1] };
