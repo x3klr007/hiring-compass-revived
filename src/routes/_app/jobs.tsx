@@ -20,7 +20,6 @@ import { MapPin, Calendar as CalendarIcon, Users, ArrowUp, ArrowDown } from "luc
 type JobsSearch = {
   q?: string;
   status?: string[];
-  priority?: string[];
   region?: string;
 };
 
@@ -37,7 +36,6 @@ export const Route = createFileRoute("/_app/jobs")({
     return {
       ...(q ? { q } : {}),
       ...(toArr(raw.status) ? { status: toArr(raw.status) } : {}),
-      ...(toArr(raw.priority) ? { priority: toArr(raw.priority) } : {}),
       ...(region ? { region } : {}),
     };
   },
@@ -52,7 +50,6 @@ type Job = {
   headcount: number;
   hired_count: number;
   status: string;
-  priority: string;
   description?: string | null;
   opened_at?: string | null;
   target_fill_date?: string | null;
@@ -66,7 +63,6 @@ const REGION_ORDER = [
 const BRANCH_ORDER = ["Headquarters", "Boys School", "Girls School"];
 
 const STATUS_OPTIONS = ["Open", "Filled", "On Hold"];
-const PRIORITY_OPTIONS = ["High", "Normal"];
 
 function JobsPage() {
   const { t, lang } = useI18n();
@@ -84,15 +80,9 @@ function JobsPage() {
   const [search, setSearch] = useState(search_.q ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState((search_.q ?? "").toLowerCase());
   const statuses = useMemo<Set<string>>(() => new Set<string>(search_.status ?? []), [search_.status]);
-  const priorities = useMemo<Set<string>>(() => new Set<string>(search_.priority ?? []), [search_.priority]);
   const setStatuses = (s: Set<string>) =>
     navigate({
       search: (prev: JobsSearch) => ({ ...prev, status: s.size ? [...s] : undefined }),
-      replace: true,
-    });
-  const setPriorities = (s: Set<string>) =>
-    navigate({
-      search: (prev: JobsSearch) => ({ ...prev, priority: s.size ? [...s] : undefined }),
       replace: true,
     });
 
@@ -134,19 +124,17 @@ function JobsPage() {
   const filteredJobs = useMemo(() => {
     return allJobs.filter((j) => {
       if (statuses.size && !statuses.has(j.status)) return false;
-      if (priorities.size && !priorities.has(j.priority)) return false;
       if (debouncedSearch) {
         const hay = `${j.title} ${j.job_code}`.toLowerCase();
         if (!hay.includes(debouncedSearch)) return false;
       }
       return true;
     });
-  }, [allJobs, statuses, priorities, debouncedSearch]);
+  }, [allJobs, statuses, debouncedSearch]);
 
   const sortedJobs = useMemo(() => {
     if (sortBy === "default") return filteredJobs;
     const dir = sortDir === "asc" ? 1 : -1;
-    const priorityRank = (p: string) => (p === "High" ? 0 : 1);
     const regionRank = (r: string) => {
       const i = REGION_ORDER.indexOf(r);
       return i === -1 ? 999 : i;
@@ -157,7 +145,6 @@ function JobsPage() {
     };
     const key = (j: Job): number | string => {
       switch (sortBy) {
-        case "priority": return priorityRank(j.priority);
         case "region": return regionRank(j.region);
         case "branch": return branchRank(j.branch);
         case "remaining": return Math.max(0, j.headcount - j.hired_count);
@@ -209,7 +196,7 @@ function JobsPage() {
     tab === "all" ? grouped.regions : grouped.regions.filter((r) => r === tab);
 
   const activeFilters =
-    (debouncedSearch ? 1 : 0) + statuses.size + priorities.size;
+    (debouncedSearch ? 1 : 0) + statuses.size;
 
   const toggle = (set: Set<string>, val: string, setter: (s: Set<string>) => void) => {
     const next = new Set(set);
@@ -221,7 +208,6 @@ function JobsPage() {
   const clearAll = () => {
     setSearch("");
     setStatuses(new Set());
-    setPriorities(new Set());
   };
 
   return (
@@ -282,7 +268,6 @@ function JobsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">{t("default")}</SelectItem>
-                <SelectItem value="priority">{t("priority")}</SelectItem>
                 <SelectItem value="region">{t("region")}</SelectItem>
                 <SelectItem value="branch">{t("branch")}</SelectItem>
                 <SelectItem value="remaining">{t("remainingVacancies")}</SelectItem>
@@ -330,18 +315,6 @@ function JobsPage() {
               </Chip>
             ))}
           </FilterGroup>
-          <FilterGroup label={t("priority")}>
-            {PRIORITY_OPTIONS.map((p) => (
-              <Chip
-                key={p}
-                active={priorities.has(p)}
-                onClick={() => toggle(priorities, p, setPriorities)}
-                tone={p === "High" ? "destructive" : "default"}
-              >
-                {p}
-              </Chip>
-            ))}
-          </FilterGroup>
         </div>
       </Card>
 
@@ -375,12 +348,10 @@ function JobsPage() {
               allJobs={allJobs}
               search={debouncedSearch}
               statuses={statuses}
-              priorities={priorities}
               region={tab}
               onClearAll={clearAll}
               onClearSearch={() => setSearch("")}
               onClearStatuses={() => setStatuses(new Set())}
-              onClearPriorities={() => setPriorities(new Set())}
               onClearRegion={() => setTab("all")}
               onPickJob={setSelectedJob}
             />
@@ -405,7 +376,7 @@ function JobsPage() {
                         <SortableTh className="px-4 py-2" sortKey="title" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("title")}</SortableTh>
                         <SortableTh className="px-4 py-2 w-32" sortKey="region" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("region")}</SortableTh>
                         <SortableTh className="px-4 py-2 w-32" sortKey="branch" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("branch")}</SortableTh>
-                        <SortableTh className="px-4 py-2 w-24" sortKey="priority" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{ar ? "الأولوية" : "Priority"}</SortableTh>
+                        
                         <SortableTh className="px-4 py-2 w-20" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("headcount")}</SortableTh>
                         <SortableTh className="px-4 py-2 w-20" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("hired")}</SortableTh>
                         <SortableTh className="px-4 py-2 w-24" sortKey="remaining" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("remaining")}</SortableTh>
@@ -432,11 +403,6 @@ function JobsPage() {
                               <span className="inline-flex items-center gap-1.5">
                                 <BranchIcon branch={j.branch} /> {j.branch}
                               </span>
-                            </td>
-                            <td className="px-4 py-2">
-                              <Badge variant={j.priority === "High" ? "destructive" : "outline"}>
-                                {j.priority}
-                              </Badge>
                             </td>
                             <td className="px-4 py-2 text-end tabular-nums">{j.headcount}</td>
                             <td className="px-4 py-2 text-end tabular-nums">{j.hired_count}</td>
@@ -486,7 +452,7 @@ function JobsPage() {
                               <tr>
                                 <SortableTh className="px-5 py-2 w-32" sortKey="code" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("code")}</SortableTh>
                                 <SortableTh className="px-4 py-2" sortKey="title" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("title")}</SortableTh>
-                                <SortableTh className="px-4 py-2 w-28" sortKey="priority" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{ar ? "الأولوية" : "Priority"}</SortableTh>
+                                
                                 <SortableTh className="px-4 py-2 w-24" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("headcount")}</SortableTh>
                                 <SortableTh className="px-4 py-2 w-24" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("hired")}</SortableTh>
                                 <SortableTh className="px-4 py-2 w-24" sortKey="status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("status")}</SortableTh>
@@ -504,11 +470,6 @@ function JobsPage() {
                                   </td>
                                   <td className="px-4 py-2">
                                     <Highlight text={j.title} match={debouncedSearch} />
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    <Badge variant={j.priority === "High" ? "destructive" : "outline"}>
-                                      {j.priority}
-                                    </Badge>
                                   </td>
                                   <td className="px-4 py-2">{j.headcount}</td>
                                   <td className="px-4 py-2">{j.hired_count}</td>
@@ -580,7 +541,6 @@ function JobDetailsDialog({
             <DialogHeader>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-xs text-muted-foreground">{job.job_code}</span>
-                <Badge variant={job.priority === "High" ? "destructive" : "outline"}>{job.priority}</Badge>
                 <Badge variant={job.status === "Open" ? "default" : "secondary"}>{job.status}</Badge>
                 <Badge variant="outline">{classification}</Badge>
               </div>
@@ -738,7 +698,7 @@ function Chip({
 
 function labelForSort(sortBy: string, t: (k: any) => string) {
   switch (sortBy) {
-    case "priority": return t("priority");
+    
     case "region": return t("region");
     case "branch": return t("branch");
     case "remaining": return t("remainingVacancies");
@@ -808,32 +768,28 @@ function SortableTh({
 }
 
 function EmptyMatches({
-  ar, allJobs, search, statuses, priorities, region,
-  onClearAll, onClearSearch, onClearStatuses, onClearPriorities, onClearRegion, onPickJob,
+  ar, allJobs, search, statuses, region,
+  onClearAll, onClearSearch, onClearStatuses, onClearRegion, onPickJob,
 }: {
   ar: boolean;
   allJobs: Job[];
   search: string;
   statuses: Set<string>;
-  priorities: Set<string>;
   region: string;
   onClearAll: () => void;
   onClearSearch: () => void;
   onClearStatuses: () => void;
-  onClearPriorities: () => void;
   onClearRegion: () => void;
   onPickJob: (j: Job) => void;
 }) {
   const active: { label: string; value: string; clear: () => void }[] = [];
   if (search) active.push({ label: ar ? "بحث" : "Search", value: `"${search}"`, clear: onClearSearch });
   if (statuses.size) active.push({ label: ar ? "الحالة" : "Status", value: [...statuses].join(", "), clear: onClearStatuses });
-  if (priorities.size) active.push({ label: ar ? "الأولوية" : "Priority", value: [...priorities].join(", "), clear: onClearPriorities });
   if (region !== "all") active.push({ label: ar ? "المنطقة" : "Region", value: region, clear: onClearRegion });
 
   // Build alternative suggestions by relaxing one filter at a time
   const matchExceptSearch = (j: Job) =>
     (!statuses.size || statuses.has(j.status)) &&
-    (!priorities.size || priorities.has(j.priority)) &&
     (region === "all" || j.region === region);
 
   const suggestions: { label: string; jobs: Job[]; apply: () => void }[] = [];
@@ -848,7 +804,6 @@ function EmptyMatches({
   if (region !== "all") {
     const drop = allJobs.filter((j) =>
       (!statuses.size || statuses.has(j.status)) &&
-      (!priorities.size || priorities.has(j.priority)) &&
       (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
     ).slice(0, 5);
     if (drop.length) suggestions.push({
@@ -858,24 +813,12 @@ function EmptyMatches({
   }
   if (statuses.size) {
     const drop = allJobs.filter((j) =>
-      (!priorities.size || priorities.has(j.priority)) &&
       (region === "all" || j.region === region) &&
       (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
     ).slice(0, 5);
     if (drop.length) suggestions.push({
       label: ar ? "تجاهل فلتر الحالة" : "Ignore status filter",
       jobs: drop, apply: onClearStatuses,
-    });
-  }
-  if (priorities.size) {
-    const drop = allJobs.filter((j) =>
-      (!statuses.size || statuses.has(j.status)) &&
-      (region === "all" || j.region === region) &&
-      (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
-    ).slice(0, 5);
-    if (drop.length) suggestions.push({
-      label: ar ? "تجاهل فلتر الأولوية" : "Ignore priority filter",
-      jobs: drop, apply: onClearPriorities,
     });
   }
 
@@ -1000,9 +943,6 @@ function SuggestionList({ jobs, onPickJob }: { jobs: Job[]; onPickJob: (j: Job) 
             </span>
             <span className="flex items-center gap-2 shrink-0">
               <Badge variant="outline" className="text-xs">{j.region}</Badge>
-              <Badge variant={j.priority === "High" ? "destructive" : "outline"} className="text-xs">
-                {j.priority}
-              </Badge>
             </span>
           </button>
         </li>

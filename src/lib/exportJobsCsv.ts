@@ -8,7 +8,6 @@ export type ExportJob = {
   headcount: number;
   hired_count: number;
   status: string;
-  priority: string;
 };
 
 const HEADERS = [
@@ -21,7 +20,6 @@ const HEADERS = [
   ["Hired", "تم التعيين"],
   ["Remaining", "المتبقي"],
   ["Status", "الحالة"],
-  ["Priority", "الأولوية"],
 ];
 
 const escape = (v: unknown) => {
@@ -42,7 +40,6 @@ export function exportJobsToCsv(jobs: ExportJob[]) {
       j.hired_count,
       Math.max(0, j.headcount - j.hired_count),
       j.status,
-      j.priority,
     ]
       .map(escape)
       .join(","),
