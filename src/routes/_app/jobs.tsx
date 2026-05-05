@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { MapPin, Calendar as CalendarIcon, Users } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { MapPin, Calendar as CalendarIcon, Users, ArrowUp, ArrowDown } from "lucide-react";
 
 export const Route = createFileRoute("/_app/jobs")({ component: JobsPage });
 
