@@ -51,7 +51,6 @@ function Dashboard() {
     const totalHeadcount = jobs.reduce((a, j) => a + (j.headcount || 0), 0);
     const totalHired = jobs.reduce((a, j) => a + (j.hired_count || 0), 0);
     const open = jobs.filter((j) => j.status === "Open").length;
-    const high = jobs.filter((j) => j.priority === "High").length;
     const regions = new Set(jobs.map((j) => j.region)).size;
     const branches = new Set(jobs.map((j) => `${j.region}|${j.branch}`)).size;
 
