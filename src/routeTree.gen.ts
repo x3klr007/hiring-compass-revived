@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppScreeningRouteImport } from './routes/_app/screening'
+import { Route as AppRetrySettingsRouteImport } from './routes/_app/retry-settings'
 import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppJobsRouteImport } from './routes/_app/jobs'
 import { Route as AppDriveFailuresRouteImport } from './routes/_app/drive-failures'
@@ -51,6 +52,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppScreeningRoute = AppScreeningRouteImport.update({
   id: '/screening',
   path: '/screening',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRetrySettingsRoute = AppRetrySettingsRouteImport.update({
+  id: '/retry-settings',
+  path: '/retry-settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPipelineRoute = AppPipelineRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/drive-failures': typeof AppDriveFailuresRoute
   '/jobs': typeof AppJobsRoute
   '/pipeline': typeof AppPipelineRoute
+  '/retry-settings': typeof AppRetrySettingsRoute
   '/screening': typeof AppScreeningRoute
   '/settings': typeof AppSettingsRoute
   '/templates': typeof AppTemplatesRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/drive-failures': typeof AppDriveFailuresRoute
   '/jobs': typeof AppJobsRoute
   '/pipeline': typeof AppPipelineRoute
+  '/retry-settings': typeof AppRetrySettingsRoute
   '/screening': typeof AppScreeningRoute
   '/settings': typeof AppSettingsRoute
   '/templates': typeof AppTemplatesRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/_app/drive-failures': typeof AppDriveFailuresRoute
   '/_app/jobs': typeof AppJobsRoute
   '/_app/pipeline': typeof AppPipelineRoute
+  '/_app/retry-settings': typeof AppRetrySettingsRoute
   '/_app/screening': typeof AppScreeningRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/templates': typeof AppTemplatesRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/drive-failures'
     | '/jobs'
     | '/pipeline'
+    | '/retry-settings'
     | '/screening'
     | '/settings'
     | '/templates'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/drive-failures'
     | '/jobs'
     | '/pipeline'
+    | '/retry-settings'
     | '/screening'
     | '/settings'
     | '/templates'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/_app/drive-failures'
     | '/_app/jobs'
     | '/_app/pipeline'
+    | '/_app/retry-settings'
     | '/_app/screening'
     | '/_app/settings'
     | '/_app/templates'
@@ -238,6 +250,13 @@ declare module '@tanstack/react-router' {
       path: '/screening'
       fullPath: '/screening'
       preLoaderRoute: typeof AppScreeningRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/retry-settings': {
+      id: '/_app/retry-settings'
+      path: '/retry-settings'
+      fullPath: '/retry-settings'
+      preLoaderRoute: typeof AppRetrySettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/pipeline': {
@@ -308,6 +327,7 @@ interface AppRouteChildren {
   AppDriveFailuresRoute: typeof AppDriveFailuresRoute
   AppJobsRoute: typeof AppJobsRoute
   AppPipelineRoute: typeof AppPipelineRoute
+  AppRetrySettingsRoute: typeof AppRetrySettingsRoute
   AppScreeningRoute: typeof AppScreeningRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
@@ -322,6 +342,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDriveFailuresRoute: AppDriveFailuresRoute,
   AppJobsRoute: AppJobsRoute,
   AppPipelineRoute: AppPipelineRoute,
+  AppRetrySettingsRoute: AppRetrySettingsRoute,
   AppScreeningRoute: AppScreeningRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTemplatesRoute: AppTemplatesRoute,

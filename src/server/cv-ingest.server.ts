@@ -199,7 +199,30 @@ export type RetryPolicy = {
   // Extra attempts ONLY for connection-level errors (refused / DNS / reset / delayed connect)
   connectionErrorBonusAttempts: number;
   connectionErrorBaseDelayMs: number;
+  // Optional override for transient HTTP statuses (defaults to module-level set)
+  transientStatuses?: number[];
 };
+
+export function getDefaultTransientStatuses(): number[] {
+  return Array.from(TRANSIENT_STATUSES).sort((a, b) => a - b);
+}
+
+export function getRetryPolicySnapshot() {
+  return {
+    policy: { ...DEFAULT_RETRY_POLICY },
+    transientStatuses: getDefaultTransientStatuses(),
+    envVars: {
+      DRIVE_RETRY_MAX_ATTEMPTS: process.env.DRIVE_RETRY_MAX_ATTEMPTS ?? null,
+      DRIVE_RETRY_BASE_DELAY_MS: process.env.DRIVE_RETRY_BASE_DELAY_MS ?? null,
+      DRIVE_RETRY_MAX_DELAY_MS: process.env.DRIVE_RETRY_MAX_DELAY_MS ?? null,
+      DRIVE_RETRY_FACTOR: process.env.DRIVE_RETRY_FACTOR ?? null,
+      DRIVE_RETRY_JITTER: process.env.DRIVE_RETRY_JITTER ?? null,
+      DRIVE_RETRY_CONN_BONUS: process.env.DRIVE_RETRY_CONN_BONUS ?? null,
+      DRIVE_RETRY_CONN_BASE_DELAY_MS: process.env.DRIVE_RETRY_CONN_BASE_DELAY_MS ?? null,
+      DRIVE_RETRY_TRANSIENT_STATUSES: process.env.DRIVE_RETRY_TRANSIENT_STATUSES ?? null,
+    },
+  };
+}
 
 function envInt(name: string, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER): number {
   const raw = process.env[name];
@@ -266,6 +289,9 @@ async function fetchWithRetry(
   const hasAuth = headerKeys.includes("Authorization");
   const hasConnKey = headerKeys.includes("X-Connection-Api-Key");
 
+  const transientCheck = (status: number) =>
+    policy.transientStatuses ? policy.transientStatuses.includes(status) : isTransientStatus(status);
+
   let attempt = 0;
   while (true) {
     attempt += 1;
@@ -278,7 +304,7 @@ async function fetchWithRetry(
       const res = await fetch(url, init);
       const dur = Date.now() - t0;
       lastStatus = res.status;
-      if (isTransientStatus(res.status)) {
+      if (transientCheck(res.status)) {
         lastBody = await res.clone().text().catch(() => "<unreadable>");
         if (attempt < baseMax) {
           const delay = backoffDelay(attempt, policy.baseDelayMs, policy.factor, policy.maxDelayMs, policy.jitter);
@@ -402,6 +428,74 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
   const json = (await res.json()) as { files?: DriveFile[] };
   console.log(`[listDriveFolder][${reqId}] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
   return json.files ?? [];
+}
+
+export async function testRetryPolicy(input: {
+  policy: RetryPolicy;
+  folderId?: string;
+}): Promise<{
+  ok: boolean;
+  reqId: string;
+  attempts: number;
+  totalMs: number;
+  status?: number;
+  error?: string;
+  logs: string[];
+  policyUsed: RetryPolicy;
+}> {
+  const reqId = newReqId("test");
+  const start = Date.now();
+  const logs: string[] = [];
+  // Capture console output during this call
+  const origLog = console.log;
+  const origWarn = console.warn;
+  const origErr = console.error;
+  const cap = (lvl: string) => (...args: unknown[]) => {
+    const msg = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+    if (msg.includes(reqId)) logs.push(`[${lvl}] ${msg}`);
+  };
+  console.log = (...a) => { cap("log")(...a); origLog(...a); };
+  console.warn = (...a) => { cap("warn")(...a); origWarn(...a); };
+  console.error = (...a) => { cap("error")(...a); origErr(...a); };
+
+  let attempts = 0;
+  // Wrap fetch to count attempts
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = ((url: any, init: any) => {
+    attempts += 1;
+    return origFetch(url, init);
+  }) as typeof fetch;
+
+  const folderId = input.folderId?.trim() || "root";
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+  const url = `${DRIVE_GATEWAY}/files?q=${q}&pageSize=1&fields=files(id)`;
+  try {
+    const res = await fetchWithRetry(url, { headers: driveHeaders() }, "RetryTest", input.policy, reqId);
+    return {
+      ok: res.ok,
+      reqId,
+      attempts,
+      totalMs: Date.now() - start,
+      status: res.status,
+      logs,
+      policyUsed: input.policy,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      reqId,
+      attempts,
+      totalMs: Date.now() - start,
+      error: (err as Error).message,
+      logs,
+      policyUsed: input.policy,
+    };
+  } finally {
+    globalThis.fetch = origFetch;
+    console.log = origLog;
+    console.warn = origWarn;
+    console.error = origErr;
+  }
 }
 
 export async function getDriveFileMeta(fileId: string): Promise<DriveFile> {

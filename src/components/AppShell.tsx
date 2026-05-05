@@ -14,6 +14,7 @@ import {
   Languages,
   Compass,
   AlertCircle,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, type TKey } from "@/contexts/I18nContext";
@@ -33,6 +34,7 @@ const NAV: NavItem[] = [
   { to: "/templates", key: "templates", icon: Mail, admin: true },
   { to: "/audit", key: "auditLog", icon: ScrollText, admin: true },
   { to: "/drive-failures", key: "driveFailures", icon: AlertCircle, admin: true },
+  { to: "/retry-settings", key: "retrySettings", icon: SlidersHorizontal, admin: true },
   { to: "/settings", key: "settings", icon: Settings, admin: true },
 ];
 
