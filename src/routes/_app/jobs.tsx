@@ -51,6 +51,8 @@ function JobsPage() {
   const [statuses, setStatuses] = useState<Set<string>>(new Set());
   const [priorities, setPriorities] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [sortBy, setSortBy] = useState<"default" | "priority" | "region" | "branch" | "remaining" | "hired">("default");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 200);
