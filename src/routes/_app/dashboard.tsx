@@ -72,7 +72,7 @@ function Dashboard() {
       }, {}),
     ).sort((a, b) => b[1] - a[1]);
 
-    return { totalHeadcount, totalHired, open, high, regions, branches, byRegion, byRole };
+    return { totalHeadcount, totalHired, open, regions, branches, byRegion, byRole };
   }, [jobs]);
 
   const fillRate = stats.totalHeadcount
@@ -100,13 +100,6 @@ function Dashboard() {
       icon: MapPin,
       sub: `${stats.branches} ${ar ? "فرعاً" : "branches"}`,
       tone: "success",
-    },
-    {
-      label: ar ? "أولوية عالية" : "High Priority",
-      value: stats.high,
-      icon: Sparkles,
-      sub: ar ? "فروع جديدة" : "new branches",
-      tone: "warning",
     },
   ];
 
@@ -144,7 +137,6 @@ function Dashboard() {
               <MiniStat label={ar ? "مفتوح" : "Open"} value={stats.open} />
               <MiniStat label={ar ? "تم التوظيف" : "Hired"} value={stats.totalHired} />
               <MiniStat label={ar ? "المتبقي" : "Remaining"} value={stats.totalHeadcount - stats.totalHired} />
-              <MiniStat label={ar ? "أولوية عالية" : "Urgent"} value={stats.high} />
             </div>
           </div>
         </CardContent>
