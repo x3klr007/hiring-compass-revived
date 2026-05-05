@@ -259,6 +259,34 @@ function Dashboard() {
               {ar ? "مسح" : "Clear"}
             </Button>
           )}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings2 className="h-4 w-4 mr-1" />
+                {ar ? "تخصيص" : "Customize"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64">
+              <div className="text-sm font-medium mb-2">
+                {ar ? "اختر البطاقات" : "Visible KPI cards"}
+              </div>
+              <div className="space-y-2">
+                {ALL_KPIS.map((k) => (
+                  <label
+                    key={k.id}
+                    className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
+                  >
+                    <Checkbox
+                      checked={selectedKpiIds.includes(k.id)}
+                      onCheckedChange={() => toggleKpi(k.id)}
+                    />
+                    <k.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>{k.label}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button
             size="sm"
             onClick={() =>
