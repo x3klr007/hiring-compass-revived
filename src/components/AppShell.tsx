@@ -13,6 +13,7 @@ import {
   LogOut,
   Languages,
   Compass,
+  AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, type TKey } from "@/contexts/I18nContext";
