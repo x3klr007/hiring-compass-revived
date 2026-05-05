@@ -154,57 +154,127 @@ export function parseDriveLink(input: string): { kind: "folder" | "file"; id: st
 
 export type DriveFile = { id: string; name: string; mimeType: string; size?: string };
 
-async function fetchWithRetry(url: string, init: RequestInit, label: string): Promise<Response> {
+// ---------- Configurable retry policy ----------
+export type RetryPolicy = {
+  maxAttempts: number;        // total attempts (incl. first)
+  baseDelayMs: number;        // initial backoff
+  maxDelayMs: number;         // cap per attempt
+  factor: number;             // exponential factor
+  jitter: number;             // 0..1 random jitter ratio
+  // Extra attempts ONLY for connection-level errors (refused / DNS / reset / delayed connect)
+  connectionErrorBonusAttempts: number;
+  connectionErrorBaseDelayMs: number;
+};
+
+export const DEFAULT_RETRY_POLICY: RetryPolicy = {
+  maxAttempts: 4,
+  baseDelayMs: 400,
+  maxDelayMs: 8_000,
+  factor: 2,
+  jitter: 0.25,
+  connectionErrorBonusAttempts: 3,
+  connectionErrorBaseDelayMs: 1_000,
+};
+
+const CONNECTION_ERROR_RE =
+  /(connection refused|delayed connect|econnrefused|econnreset|enotfound|eai_again|socket hang up|fetch failed|network|upstream connect error|disconnect\/reset before headers|reset reason)/i;
+
+function isConnectionError(msg: string) {
+  return CONNECTION_ERROR_RE.test(msg);
+}
+
+function backoffDelay(attempt: number, base: number, factor: number, max: number, jitter: number) {
+  const raw = Math.min(base * Math.pow(factor, attempt - 1), max);
+  const j = 1 + (Math.random() * 2 - 1) * jitter;
+  return Math.max(0, Math.round(raw * j));
+}
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  label: string,
+  policy: RetryPolicy = DEFAULT_RETRY_POLICY,
+): Promise<Response> {
   // Circuit breaker short-circuit
   if (shouldShortCircuit()) {
     const snap = breakerSnapshot();
     console.warn(`[${label}] short-circuited by breaker (cooldown ${snap.cooldownRemainingMs}ms)`);
     throw new CircuitOpenError(snap.cooldownRemainingMs, snap.lastError);
   }
-  // In HALF_OPEN we only allow a single probe attempt
   const isProbe = BREAKER.state === "HALF_OPEN";
-  const MAX = isProbe ? 1 : 4;
+  // HALF_OPEN: only one probe attempt regardless of policy
+  const baseMax = isProbe ? 1 : policy.maxAttempts;
   let lastErr: unknown;
   let lastStatus: number | undefined;
   let lastBody: string | undefined;
+  let connectionRetriesUsed = 0;
   const headerKeys = Object.keys((init.headers ?? {}) as Record<string, string>);
   const hasAuth = headerKeys.includes("Authorization");
   const hasConnKey = headerKeys.includes("X-Connection-Api-Key");
-  for (let attempt = 1; attempt <= MAX; attempt++) {
+
+  let attempt = 0;
+  // Use a while loop so we can grant bonus attempts dynamically for connection errors
+  while (true) {
+    attempt += 1;
     const t0 = Date.now();
+    let connError = false;
     try {
-      console.log(`[${label}] attempt ${attempt}/${MAX} → ${url} (auth=${hasAuth}, connKey=${hasConnKey}, probe=${isProbe})`);
+      console.log(
+        `[${label}] attempt ${attempt} → ${url} (auth=${hasAuth}, connKey=${hasConnKey}, probe=${isProbe}, connRetries=${connectionRetriesUsed})`,
+      );
       const res = await fetch(url, init);
       const dur = Date.now() - t0;
       lastStatus = res.status;
-      if (isTransientStatus(res.status) && attempt < MAX) {
+      if (isTransientStatus(res.status)) {
         lastBody = await res.clone().text().catch(() => "<unreadable>");
-        console.warn(`[${label}] attempt ${attempt} transient ${res.status} in ${dur}ms — body: ${lastBody?.slice(0, 300)}`);
-        await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
-        continue;
+        // Even non-connection transient HTTP errors retry within baseMax
+        if (attempt < baseMax) {
+          const delay = backoffDelay(attempt, policy.baseDelayMs, policy.factor, policy.maxDelayMs, policy.jitter);
+          console.warn(`[${label}] attempt ${attempt} transient ${res.status} in ${dur}ms — retrying in ${delay}ms`);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        recordFailure(`HTTP ${res.status}`);
+        console.error(`[${label}] FAILED after ${attempt} attempts — HTTP ${res.status}`);
+        throw new Error(`${label} last status ${res.status}: ${lastBody?.slice(0, 300) ?? ""}`);
       }
       console.log(`[${label}] attempt ${attempt} done status=${res.status} in ${dur}ms`);
-      // Feed breaker
-      if (isTransientStatus(res.status)) {
-        recordFailure(`HTTP ${res.status}`);
-      } else {
-        recordSuccess();
-      }
+      recordSuccess();
       return res;
     } catch (err) {
       const dur = Date.now() - t0;
+      const msg = (err as Error)?.message ?? "unknown";
       lastErr = err;
-      console.warn(`[${label}] attempt ${attempt} threw in ${dur}ms: ${(err as Error)?.message}`);
-      if (attempt < MAX) {
-        await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
+      connError = isConnectionError(msg);
+      console.warn(`[${label}] attempt ${attempt} threw in ${dur}ms (connError=${connError}): ${msg}`);
+
+      // Bonus attempts specifically for connection-level errors
+      const allowance =
+        baseMax + (connError && !isProbe ? policy.connectionErrorBonusAttempts : 0);
+      if (attempt < allowance) {
+        if (connError) connectionRetriesUsed += 1;
+        const delay = connError
+          ? backoffDelay(
+              connectionRetriesUsed,
+              policy.connectionErrorBaseDelayMs,
+              policy.factor,
+              policy.maxDelayMs,
+              policy.jitter,
+            )
+          : backoffDelay(attempt, policy.baseDelayMs, policy.factor, policy.maxDelayMs, policy.jitter);
+        console.warn(`[${label}] retrying in ${delay}ms (allowance=${allowance})`);
+        await new Promise((r) => setTimeout(r, delay));
         continue;
       }
+      break;
     }
   }
   const reason = lastErr
     ? `network error: ${(lastErr as Error)?.message ?? "unknown"}`
     : `last status ${lastStatus}: ${lastBody?.slice(0, 300) ?? ""}`;
-  console.error(`[${label}] FAILED after ${MAX} attempts — url=${url}, auth=${hasAuth}, connKey=${hasConnKey}, ${reason}`);
+  console.error(
+    `[${label}] FAILED after ${attempt} attempts (connRetries=${connectionRetriesUsed}) — url=${url}, ${reason}`,
+  );
   recordFailure(reason);
   throw new Error(`${label} ${reason}`);
 }
