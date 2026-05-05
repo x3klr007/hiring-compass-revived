@@ -95,6 +95,27 @@ function ScreeningPage() {
         </p>
       </div>
 
+      {authError && (
+        <Card className="glass border-destructive/50 p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <div className="font-medium">
+              {lang === "ar" ? "انتهت جلستك" : "Your session has expired"}
+            </div>
+            <div className="text-muted-foreground mt-1">
+              {lang === "ar"
+                ? "يرجى تسجيل الدخول مرة أخرى لمتابعة الفرز الذكي."
+                : "Please sign in again to continue running AI screening."}
+            </div>
+          </div>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/auth">
+              {lang === "ar" ? "تسجيل الدخول" : "Sign in"}
+            </Link>
+          </Button>
+        </Card>
+      )}
+
       <Card className="glass shadow-elegant p-6 space-y-4">
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
