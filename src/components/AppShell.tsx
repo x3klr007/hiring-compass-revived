@@ -28,7 +28,7 @@ const NAV: NavItem[] = [
   { to: "/pipeline", key: "pipeline", icon: Kanban },
   { to: "/calendar", key: "calendar", icon: Calendar },
   { to: "/screening", key: "aiScreening", icon: Sparkles },
-  { to: "/assistant", key: "aiChat", icon: Bot },
+  { to: "/ai-chat", key: "aiChat", icon: Bot },
   { to: "/templates", key: "templates", icon: Mail, admin: true },
   { to: "/audit", key: "auditLog", icon: ScrollText, admin: true },
   { to: "/settings", key: "settings", icon: Settings, admin: true },
