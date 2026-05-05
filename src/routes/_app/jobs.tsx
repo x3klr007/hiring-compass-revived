@@ -26,6 +26,10 @@ type Job = {
   hired_count: number;
   status: string;
   priority: string;
+  description?: string | null;
+  opened_at?: string | null;
+  target_fill_date?: string | null;
+  created_at?: string | null;
 };
 
 const REGION_ORDER = [
