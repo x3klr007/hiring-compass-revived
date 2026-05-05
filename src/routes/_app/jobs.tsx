@@ -943,9 +943,6 @@ function SuggestionList({ jobs, onPickJob }: { jobs: Job[]; onPickJob: (j: Job) 
             </span>
             <span className="flex items-center gap-2 shrink-0">
               <Badge variant="outline" className="text-xs">{j.region}</Badge>
-              <Badge variant={j.priority === "High" ? "destructive" : "outline"} className="text-xs">
-                {j.priority}
-              </Badge>
             </span>
           </button>
         </li>
