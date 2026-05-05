@@ -96,22 +96,49 @@ function driveHeaders() {
   };
 }
 
-export async function checkDriveGateway(): Promise<{ ok: boolean; status?: number; latencyMs: number; error?: string }> {
+export async function checkDriveGateway(): Promise<{
+  ok: boolean;
+  status?: number;
+  latencyMs: number;
+  error?: string;
+  breaker: ReturnType<typeof breakerSnapshot>;
+}> {
   const t0 = Date.now();
+  // If breaker is OPEN, short-circuit without hitting the gateway.
+  if (shouldShortCircuit()) {
+    const snap = breakerSnapshot();
+    return {
+      ok: false,
+      latencyMs: 0,
+      error: `Circuit open — retry in ${Math.ceil(snap.cooldownRemainingMs / 1000)}s`,
+      breaker: snap,
+    };
+  }
   try {
     const headers = driveHeaders();
-    // Lightweight call: list 1 file from root. Uses gateway + connector creds.
     const url = `${DRIVE_GATEWAY}/files?pageSize=1&fields=files(id)`;
     const res = await fetch(url, { headers });
     const latencyMs = Date.now() - t0;
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      return { ok: false, status: res.status, latencyMs, error: body.slice(0, 300) || `HTTP ${res.status}` };
+      const err = body.slice(0, 300) || `HTTP ${res.status}`;
+      if (isTransientStatus(res.status)) recordFailure(err);
+      else recordSuccess(); // non-transient (e.g. 401/403/404) — gateway is up
+      return { ok: false, status: res.status, latencyMs, error: err, breaker: breakerSnapshot() };
     }
-    return { ok: true, status: res.status, latencyMs };
+    recordSuccess();
+    return { ok: true, status: res.status, latencyMs, breaker: breakerSnapshot() };
   } catch (err) {
-    return { ok: false, latencyMs: Date.now() - t0, error: (err as Error).message };
+    const msg = (err as Error).message;
+    recordFailure(msg);
+    return { ok: false, latencyMs: Date.now() - t0, error: msg, breaker: breakerSnapshot() };
   }
+}
+
+export function getDriveBreakerState() {
+  // Refresh state if cooldown elapsed
+  shouldShortCircuit();
+  return breakerSnapshot();
 }
 
 export function parseDriveLink(input: string): { kind: "folder" | "file"; id: string } | null {
