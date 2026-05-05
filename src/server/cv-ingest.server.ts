@@ -201,14 +201,29 @@ export type RetryPolicy = {
   connectionErrorBaseDelayMs: number;
 };
 
+function envInt(name: string, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+function envFloat(name: string, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
 export const DEFAULT_RETRY_POLICY: RetryPolicy = {
-  maxAttempts: 4,
-  baseDelayMs: 400,
-  maxDelayMs: 8_000,
-  factor: 2,
-  jitter: 0.25,
-  connectionErrorBonusAttempts: 3,
-  connectionErrorBaseDelayMs: 1_000,
+  maxAttempts: envInt("DRIVE_RETRY_MAX_ATTEMPTS", 4, 1, 20),
+  baseDelayMs: envInt("DRIVE_RETRY_BASE_DELAY_MS", 400, 0, 60_000),
+  maxDelayMs: envInt("DRIVE_RETRY_MAX_DELAY_MS", 8_000, 0, 120_000),
+  factor: envFloat("DRIVE_RETRY_FACTOR", 2, 1, 10),
+  jitter: envFloat("DRIVE_RETRY_JITTER", 0.25, 0, 1),
+  connectionErrorBonusAttempts: envInt("DRIVE_RETRY_CONN_BONUS", 3, 0, 20),
+  connectionErrorBaseDelayMs: envInt("DRIVE_RETRY_CONN_BASE_DELAY_MS", 1_000, 0, 60_000),
 };
 
 const CONNECTION_ERROR_RE =
