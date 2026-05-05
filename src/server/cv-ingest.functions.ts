@@ -65,6 +65,14 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
       .eq("status", "Open");
     const openJobs = (jobs ?? []) as { id: string; title: string; region: string }[];
 
+    // Preflight: verify DRIVE_GATEWAY availability before any fetch attempts
+    const health = await checkDriveGateway();
+    if (!health.ok) {
+      throw new Error(
+        `DRIVE_UNAVAILABLE: Drive gateway health check failed (status=${health.status ?? "n/a"}, latency=${health.latencyMs}ms${health.breaker?.state ? `, breaker=${health.breaker.state}` : ""}). ${health.error ?? ""}`.trim()
+      );
+    }
+
     const files =
       parsed.kind === "folder"
         ? await listDriveFolder(parsed.id)
