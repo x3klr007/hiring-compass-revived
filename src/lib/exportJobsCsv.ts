@@ -8,7 +8,6 @@ export type ExportJob = {
   headcount: number;
   hired_count: number;
   status: string;
-  priority: string;
 };
 
 const HEADERS = [
