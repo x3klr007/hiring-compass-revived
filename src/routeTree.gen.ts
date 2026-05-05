@@ -12,11 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppScreeningRouteImport } from './routes/_app/screening'
 import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppJobsRouteImport } from './routes/_app/jobs'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCandidatesRouteImport } from './routes/_app/candidates'
+import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppAuditRouteImport } from './routes/_app/audit'
+import { Route as AppAiChatRouteImport } from './routes/_app/ai-chat'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -31,6 +36,16 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppTemplatesRoute = AppTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppScreeningRoute = AppScreeningRouteImport.update({
   id: '/screening',
@@ -57,65 +72,110 @@ const AppCandidatesRoute = AppCandidatesRouteImport.update({
   path: '/candidates',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCalendarRoute = AppCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAiChatRoute = AppAiChatRouteImport.update({
+  id: '/ai-chat',
+  path: '/ai-chat',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ai-chat': typeof AppAiChatRoute
+  '/audit': typeof AppAuditRoute
+  '/calendar': typeof AppCalendarRoute
   '/candidates': typeof AppCandidatesRoute
   '/dashboard': typeof AppDashboardRoute
   '/jobs': typeof AppJobsRoute
   '/pipeline': typeof AppPipelineRoute
   '/screening': typeof AppScreeningRoute
+  '/settings': typeof AppSettingsRoute
+  '/templates': typeof AppTemplatesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ai-chat': typeof AppAiChatRoute
+  '/audit': typeof AppAuditRoute
+  '/calendar': typeof AppCalendarRoute
   '/candidates': typeof AppCandidatesRoute
   '/dashboard': typeof AppDashboardRoute
   '/jobs': typeof AppJobsRoute
   '/pipeline': typeof AppPipelineRoute
   '/screening': typeof AppScreeningRoute
+  '/settings': typeof AppSettingsRoute
+  '/templates': typeof AppTemplatesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/ai-chat': typeof AppAiChatRoute
+  '/_app/audit': typeof AppAuditRoute
+  '/_app/calendar': typeof AppCalendarRoute
   '/_app/candidates': typeof AppCandidatesRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/jobs': typeof AppJobsRoute
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/screening': typeof AppScreeningRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/templates': typeof AppTemplatesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
+    | '/ai-chat'
+    | '/audit'
+    | '/calendar'
     | '/candidates'
     | '/dashboard'
     | '/jobs'
     | '/pipeline'
     | '/screening'
+    | '/settings'
+    | '/templates'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/ai-chat'
+    | '/audit'
+    | '/calendar'
     | '/candidates'
     | '/dashboard'
     | '/jobs'
     | '/pipeline'
     | '/screening'
+    | '/settings'
+    | '/templates'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/auth'
+    | '/_app/ai-chat'
+    | '/_app/audit'
+    | '/_app/calendar'
     | '/_app/candidates'
     | '/_app/dashboard'
     | '/_app/jobs'
     | '/_app/pipeline'
     | '/_app/screening'
+    | '/_app/settings'
+    | '/_app/templates'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -146,6 +206,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/templates': {
+      id: '/_app/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AppTemplatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/screening': {
       id: '/_app/screening'
@@ -182,23 +256,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCandidatesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/calendar': {
+      id: '/_app/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/audit': {
+      id: '/_app/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ai-chat': {
+      id: '/_app/ai-chat'
+      path: '/ai-chat'
+      fullPath: '/ai-chat'
+      preLoaderRoute: typeof AppAiChatRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAiChatRoute: typeof AppAiChatRoute
+  AppAuditRoute: typeof AppAuditRoute
+  AppCalendarRoute: typeof AppCalendarRoute
   AppCandidatesRoute: typeof AppCandidatesRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppJobsRoute: typeof AppJobsRoute
   AppPipelineRoute: typeof AppPipelineRoute
   AppScreeningRoute: typeof AppScreeningRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppTemplatesRoute: typeof AppTemplatesRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAiChatRoute: AppAiChatRoute,
+  AppAuditRoute: AppAuditRoute,
+  AppCalendarRoute: AppCalendarRoute,
   AppCandidatesRoute: AppCandidatesRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppJobsRoute: AppJobsRoute,
   AppPipelineRoute: AppPipelineRoute,
   AppScreeningRoute: AppScreeningRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppTemplatesRoute: AppTemplatesRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
