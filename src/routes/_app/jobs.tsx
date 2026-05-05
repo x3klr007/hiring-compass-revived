@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Search, X, Download } from "lucide-react";
@@ -15,7 +15,31 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { MapPin, Calendar as CalendarIcon, Users, ArrowUp, ArrowDown } from "lucide-react";
 
-export const Route = createFileRoute("/_app/jobs")({ component: JobsPage });
+type JobsSearch = {
+  q?: string;
+  status?: string[];
+  priority?: string[];
+  region?: string;
+};
+
+export const Route = createFileRoute("/_app/jobs")({
+  component: JobsPage,
+  validateSearch: (raw: Record<string, unknown>): JobsSearch => {
+    const toArr = (v: unknown): string[] | undefined => {
+      if (Array.isArray(v)) return v.map(String).filter(Boolean);
+      if (typeof v === "string" && v.length) return v.split(",").filter(Boolean);
+      return undefined;
+    };
+    const q = typeof raw.q === "string" && raw.q ? raw.q : undefined;
+    const region = typeof raw.region === "string" && raw.region ? raw.region : undefined;
+    return {
+      ...(q ? { q } : {}),
+      ...(toArr(raw.status) ? { status: toArr(raw.status) } : {}),
+      ...(toArr(raw.priority) ? { priority: toArr(raw.priority) } : {}),
+      ...(region ? { region } : {}),
+    };
+  },
+});
 
 type Job = {
   id: string;
@@ -45,19 +69,46 @@ const PRIORITY_OPTIONS = ["High", "Normal"];
 function JobsPage() {
   const { t, lang } = useI18n();
   const ar = lang === "ar";
-  const [tab, setTab] = useState<string>("all");
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statuses, setStatuses] = useState<Set<string>>(new Set());
-  const [priorities, setPriorities] = useState<Set<string>>(new Set());
+  const search_ = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+
+  const tab = search_.region ?? "all";
+  const setTab = (v: string) =>
+    navigate({
+      search: (prev: JobsSearch) => ({ ...prev, region: v === "all" ? undefined : v }),
+      replace: true,
+    });
+
+  const [search, setSearch] = useState(search_.q ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState((search_.q ?? "").toLowerCase());
+  const statuses = useMemo<Set<string>>(() => new Set<string>(search_.status ?? []), [search_.status]);
+  const priorities = useMemo<Set<string>>(() => new Set<string>(search_.priority ?? []), [search_.priority]);
+  const setStatuses = (s: Set<string>) =>
+    navigate({
+      search: (prev: JobsSearch) => ({ ...prev, status: s.size ? [...s] : undefined }),
+      replace: true,
+    });
+  const setPriorities = (s: Set<string>) =>
+    navigate({
+      search: (prev: JobsSearch) => ({ ...prev, priority: s.size ? [...s] : undefined }),
+      replace: true,
+    });
+
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [sortBy, setSortBy] = useState<"default" | "priority" | "region" | "branch" | "remaining" | "hired">("default");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 200);
+    const trimmed = search.trim();
+    const id = setTimeout(() => {
+      setDebouncedSearch(trimmed.toLowerCase());
+      navigate({
+        search: (prev: JobsSearch) => ({ ...prev, q: trimmed || undefined }),
+        replace: true,
+      });
+    }, 200);
     return () => clearTimeout(id);
-  }, [search]);
+  }, [search, navigate]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["jobs"],
