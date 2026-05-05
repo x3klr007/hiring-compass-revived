@@ -75,22 +75,22 @@ function JobsPage() {
   const tab = search_.region ?? "all";
   const setTab = (v: string) =>
     navigate({
-      search: (prev) => ({ ...prev, region: v === "all" ? undefined : v }),
+      search: (prev: JobsSearch) => ({ ...prev, region: v === "all" ? undefined : v }),
       replace: true,
     });
 
   const [search, setSearch] = useState(search_.q ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState((search_.q ?? "").toLowerCase());
-  const statuses = useMemo(() => new Set(search_.status ?? []), [search_.status]);
-  const priorities = useMemo(() => new Set(search_.priority ?? []), [search_.priority]);
+  const statuses = useMemo<Set<string>>(() => new Set<string>(search_.status ?? []), [search_.status]);
+  const priorities = useMemo<Set<string>>(() => new Set<string>(search_.priority ?? []), [search_.priority]);
   const setStatuses = (s: Set<string>) =>
     navigate({
-      search: (prev) => ({ ...prev, status: s.size ? [...s] : undefined }),
+      search: (prev: JobsSearch) => ({ ...prev, status: s.size ? [...s] : undefined }),
       replace: true,
     });
   const setPriorities = (s: Set<string>) =>
     navigate({
-      search: (prev) => ({ ...prev, priority: s.size ? [...s] : undefined }),
+      search: (prev: JobsSearch) => ({ ...prev, priority: s.size ? [...s] : undefined }),
       replace: true,
     });
 
@@ -103,7 +103,7 @@ function JobsPage() {
     const id = setTimeout(() => {
       setDebouncedSearch(trimmed.toLowerCase());
       navigate({
-        search: (prev) => ({ ...prev, q: trimmed || undefined }),
+        search: (prev: JobsSearch) => ({ ...prev, q: trimmed || undefined }),
         replace: true,
       });
     }, 200);
