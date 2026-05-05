@@ -109,10 +109,11 @@ function ScreeningPage() {
             link: link.trim(),
             defaultJobId: defaultJobId || null,
             defaultRegion: defaultRegion || null,
+            genderFilter,
           },
         });
         setResults(res.results);
-        setSummary({ total: res.total, skipped: res.skipped });
+        setSummary({ total: res.total, skipped: res.skipped, filteredByGender: res.filteredByGender });
         const ok = res.results.filter((r: IngestResult) => r.ok).length;
         toast.success(
           lang === "ar"
