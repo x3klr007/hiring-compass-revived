@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Users, MapPin, Building2, TrendingUp, X } from "lucide-react";
+import { Briefcase, Users, MapPin, Building2, TrendingUp, X, Download } from "lucide-react";
+import { exportDashboardPdf } from "@/lib/exportDashboardPdf";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
