@@ -87,7 +87,7 @@ function JobsPage() {
     });
 
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  type SortKey = "default" | "priority" | "region" | "branch" | "remaining" | "hired" | "code" | "title" | "status";
+  type SortKey = "default" | "region" | "branch" | "remaining" | "hired" | "code" | "title" | "status";
   const [sortBy, setSortBy] = useState<SortKey>("default");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const toggleSort = (key: Exclude<SortKey, "default">) => {

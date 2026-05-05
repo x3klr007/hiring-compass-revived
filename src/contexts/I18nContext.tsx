@@ -53,7 +53,7 @@ const translations = {
     branch: "Branch",
     headcount: "Headcount",
     status: "Status",
-    priority: "Priority",
+    
     save: "Save",
     cancel: "Cancel",
     delete: "Delete",
@@ -150,7 +150,7 @@ const translations = {
     branch: "الفرع",
     headcount: "العدد المطلوب",
     status: "الحالة",
-    priority: "الأولوية",
+    
     save: "حفظ",
     cancel: "إلغاء",
     delete: "حذف",

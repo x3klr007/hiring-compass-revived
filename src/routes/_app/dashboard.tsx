@@ -19,7 +19,7 @@ type Job = {
   headcount: number;
   hired_count: number;
   status: string;
-  priority: string;
+  
 };
 
 const REGION_ORDER = [
