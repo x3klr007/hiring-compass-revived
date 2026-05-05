@@ -290,7 +290,11 @@ function JobsPage() {
                             </thead>
                             <tbody>
                               {list.map((j) => (
-                                <tr key={j.id} className="border-t border-border/60">
+                                <tr
+                                  key={j.id}
+                                  onClick={() => setSelectedJob(j)}
+                                  className="border-t border-border/60 cursor-pointer hover:bg-muted/40 transition-colors"
+                                >
                                   <td className="px-5 py-2 font-mono text-xs">
                                     <Highlight text={j.job_code} match={debouncedSearch} />
                                   </td>
