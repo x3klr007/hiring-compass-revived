@@ -13,6 +13,20 @@ import { ingestFromDriveLink, checkDriveHealth, type IngestResult } from "@/serv
 import { REGIONS, regionLabel } from "@/lib/regions";
 import { toast } from "sonner";
 
+function parseDriveLinkClient(input: string): { kind: "folder" | "file"; id: string } | null {
+  if (!input) return null;
+  let s = input.trim().replace(/^["'<\s]+|["'>\s]+$/g, "");
+  try { s = decodeURI(s); } catch { /* noop */ }
+  const folder = s.match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
+  if (folder) return { kind: "folder", id: folder[1] };
+  const file = s.match(/\/(?:file|document|spreadsheets|presentation)\/d\/([a-zA-Z0-9_-]{10,})/);
+  if (file) return { kind: "file", id: file[1] };
+  const open = s.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if (open) return { kind: /folder/i.test(s) ? "folder" : "file", id: open[1] };
+  if (/^[a-zA-Z0-9_-]{16,}$/.test(s)) return { kind: "folder", id: s };
+  return null;
+}
+
 type Job = { id: string; title: string; region: string };
 
 function ScreeningPage() {
@@ -23,9 +37,10 @@ function ScreeningPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [defaultJobId, setDefaultJobId] = useState<string>("");
   const [defaultRegion, setDefaultRegion] = useState<string>("");
+  const [genderFilter, setGenderFilter] = useState<"any" | "male" | "female">("any");
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<IngestResult[]>([]);
-  const [summary, setSummary] = useState<{ total: number; skipped: number } | null>(null);
+  const [summary, setSummary] = useState<{ total: number; skipped: number; filteredByGender?: number } | null>(null);
   const [authError, setAuthError] = useState(false);
   type Breaker = { state: "CLOSED" | "OPEN" | "HALF_OPEN"; failures: number; cooldownRemainingMs: number; lastError?: string };
   const [driveHealth, setDriveHealth] = useState<
@@ -108,10 +123,11 @@ function ScreeningPage() {
             link: link.trim(),
             defaultJobId: defaultJobId || null,
             defaultRegion: defaultRegion || null,
+            genderFilter,
           },
         });
         setResults(res.results);
-        setSummary({ total: res.total, skipped: res.skipped });
+        setSummary({ total: res.total, skipped: res.skipped, filteredByGender: res.filteredByGender });
         const ok = res.results.filter((r: IngestResult) => r.ok).length;
         toast.success(
           lang === "ar"
@@ -292,14 +308,47 @@ function ScreeningPage() {
           <Input
             value={link}
             onChange={(e) => setLink(e.target.value)}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData("text");
+              if (pasted) {
+                e.preventDefault();
+                setLink(pasted.trim());
+              }
+            }}
             placeholder="https://drive.google.com/drive/folders/…"
             dir="ltr"
+            spellCheck={false}
           />
-          <p className="text-xs text-muted-foreground">
-            {lang === "ar"
-              ? "يدعم: مجلد كامل أو ملف واحد. الصيغ: PDF و DOCX و TXT."
-              : "Supports: a whole folder or a single file. Formats: PDF, DOCX, TXT."}
-          </p>
+          {(() => {
+            const parsed = parseDriveLinkClient(link);
+            if (!link.trim()) {
+              return (
+                <p className="text-xs text-muted-foreground">
+                  {lang === "ar"
+                    ? "يدعم: مجلد كامل أو ملف واحد. الصيغ: PDF و DOCX و TXT. تأكد أن المشاركة \"أي شخص لديه الرابط\" أو مع حساب الخدمة."
+                    : "Supports: a whole folder or a single file. Formats: PDF, DOCX, TXT. Make sure sharing is set to 'Anyone with the link' or shared with the service account."}
+                </p>
+              );
+            }
+            if (!parsed) {
+              return (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {lang === "ar"
+                    ? "تعذر تحليل الرابط. الصق رابط Drive كاملاً مثل: https://drive.google.com/drive/folders/<ID>"
+                    : "Could not parse this link. Paste a full Drive URL like: https://drive.google.com/drive/folders/<ID>"}
+                </p>
+              );
+            }
+            return (
+              <p className="text-xs text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {lang === "ar"
+                  ? `${parsed.kind === "folder" ? "مجلد" : "ملف"} مكتشف · المعرّف: ${parsed.id.slice(0, 12)}…`
+                  : `${parsed.kind === "folder" ? "Folder" : "File"} detected · ID: ${parsed.id.slice(0, 12)}…`}
+              </p>
+            );
+          })()}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -344,7 +393,38 @@ function ScreeningPage() {
           </div>
         </div>
 
-        <Button onClick={onRun} disabled={running || (driveHealth ? !driveHealth.ok : false)} size="lg" className="w-full md:w-auto">
+        <div className="space-y-2">
+          <Label>{lang === "ar" ? "الجنس (تصفية السير الذاتية)" : "Gender filter"}</Label>
+          <div className="flex flex-wrap gap-2">
+            {([
+              { v: "any", ar: "الكل", en: "All" },
+              { v: "male", ar: "للبنين فقط", en: "Males only" },
+              { v: "female", ar: "للبنات فقط", en: "Females only" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => setGenderFilter(opt.v)}
+                className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                  genderFilter === opt.v
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background hover:bg-muted"
+                }`}
+              >
+                {lang === "ar" ? opt.ar : opt.en}
+              </button>
+            ))}
+          </div>
+          {genderFilter !== "any" && (
+            <p className="text-xs text-muted-foreground">
+              {lang === "ar"
+                ? "سيتم تجاهل السير الذاتية التي لا تطابق الجنس المختار."
+                : "CVs that don't match the selected gender will be skipped."}
+            </p>
+          )}
+        </div>
+
+        <Button onClick={onRun} disabled={running || (driveHealth ? !driveHealth.ok : false) || (link.trim() ? !parseDriveLinkClient(link) : false)} size="lg" className="w-full md:w-auto">
           {running ? (
             <>
               <Loader2 className="me-2 h-4 w-4 animate-spin" />
@@ -370,11 +450,19 @@ function ScreeningPage() {
                 ? `النتائج: ${results.filter((r) => r.ok).length} / ${summary.total}`
                 : `Results: ${results.filter((r) => r.ok).length} / ${summary.total}`}
             </div>
-            {summary.skipped > 0 && (
-              <Badge variant="secondary">
-                {summary.skipped} {lang === "ar" ? "متجاهل" : "skipped"}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {summary.skipped > 0 && (
+                <Badge variant="secondary">
+                  {summary.skipped} {lang === "ar" ? "متجاهل" : "skipped"}
+                </Badge>
+              )}
+              {summary.filteredByGender ? (
+                <Badge variant="outline">
+                  {summary.filteredByGender}{" "}
+                  {lang === "ar" ? "مستبعد بالجنس" : "filtered by gender"}
+                </Badge>
+              ) : null}
+            </div>
           </div>
           <div className="space-y-2">
             {results.map((r, i) => (

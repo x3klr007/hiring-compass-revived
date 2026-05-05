@@ -142,13 +142,35 @@ export function getDriveBreakerState() {
 }
 
 export function parseDriveLink(input: string): { kind: "folder" | "file"; id: string } | null {
-  const folderMatch = input.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (!input) return null;
+  // Normalize: trim, strip wrapping quotes/spaces, decode common encodings
+  let s = input.trim().replace(/^["'<\s]+|["'>\s]+$/g, "");
+  try {
+    s = decodeURI(s);
+  } catch {
+    /* noop */
+  }
+  // Handle "Open with → Drive" share links and "u/0/" prefix
+  // Examples handled:
+  //   https://drive.google.com/drive/folders/<ID>?usp=sharing
+  //   https://drive.google.com/drive/u/0/folders/<ID>
+  //   https://drive.google.com/drive/u/1/mobile/folders/<ID>
+  //   https://drive.google.com/file/d/<ID>/view?usp=drivesdk
+  //   https://drive.google.com/open?id=<ID>
+  //   https://docs.google.com/spreadsheets/d/<ID>/edit
+  //   raw ID
+  const folderMatch = s.match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
   if (folderMatch) return { kind: "folder", id: folderMatch[1] };
-  const fileMatch = input.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  const fileMatch = s.match(/\/(?:file|document|spreadsheets|presentation)\/d\/([a-zA-Z0-9_-]{10,})/);
   if (fileMatch) return { kind: "file", id: fileMatch[1] };
-  const openMatch = input.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (openMatch) return { kind: "file", id: openMatch[1] };
-  if (/^[a-zA-Z0-9_-]{10,}$/.test(input.trim())) return { kind: "folder", id: input.trim() };
+  const openMatch = s.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if (openMatch) {
+    // open?id= can be either folder or file — try to infer from query
+    const isFolder = /folder/i.test(s);
+    return { kind: isFolder ? "folder" : "file", id: openMatch[1] };
+  }
+  // Bare ID
+  if (/^[a-zA-Z0-9_-]{16,}$/.test(s)) return { kind: "folder", id: s };
   return null;
 }
 
