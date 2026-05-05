@@ -727,6 +727,9 @@ function labelForSort(sortBy: string, t: (k: any) => string) {
     case "branch": return t("branch");
     case "remaining": return t("remainingVacancies");
     case "hired": return t("hired");
+    case "code": return t("code");
+    case "title": return t("title");
+    case "status": return t("status");
     default: return t("default");
   }
 }
