@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Link2, Loader2, CheckCircle2, AlertCircle, Folder } from "lucide-react";
 import { ingestFromDriveLink, type IngestResult } from "@/server/cv-ingest.functions";
+import { REGIONS, regionLabel } from "@/lib/regions";
 import { toast } from "sonner";
 
 type Job = { id: string; title: string; region: string };
@@ -118,11 +119,25 @@ function ScreeningPage() {
           </div>
           <div className="space-y-2">
             <Label>{t("region")} ({lang === "ar" ? "اختياري" : "optional"})</Label>
-            <Input
-              value={defaultRegion}
-              onChange={(e) => setDefaultRegion(e.target.value)}
-              placeholder={lang === "ar" ? "الرياض / جدة / …" : "Riyadh / Jeddah / …"}
-            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setDefaultRegion("")}
+                className={`px-3 py-1.5 rounded-full text-xs border transition ${defaultRegion === "" ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
+              >
+                {lang === "ar" ? "تلقائي" : "Auto"}
+              </button>
+              {REGIONS.map((r) => (
+                <button
+                  key={r.region}
+                  type="button"
+                  onClick={() => setDefaultRegion(r.region)}
+                  className={`px-3 py-1.5 rounded-full text-xs border transition ${defaultRegion === r.region ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
+                >
+                  {regionLabel(r.region, lang)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
