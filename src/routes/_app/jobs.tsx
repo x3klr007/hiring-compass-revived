@@ -20,7 +20,6 @@ import { MapPin, Calendar as CalendarIcon, Users, ArrowUp, ArrowDown } from "luc
 type JobsSearch = {
   q?: string;
   status?: string[];
-  priority?: string[];
   region?: string;
 };
 
@@ -37,7 +36,6 @@ export const Route = createFileRoute("/_app/jobs")({
     return {
       ...(q ? { q } : {}),
       ...(toArr(raw.status) ? { status: toArr(raw.status) } : {}),
-      ...(toArr(raw.priority) ? { priority: toArr(raw.priority) } : {}),
       ...(region ? { region } : {}),
     };
   },
