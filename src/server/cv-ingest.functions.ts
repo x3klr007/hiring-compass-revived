@@ -46,12 +46,17 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
         link: z.string().min(5),
         defaultJobId: z.string().uuid().nullable().optional(),
         defaultRegion: z.string().nullable().optional(),
+        genderFilter: z.enum(["any", "male", "female"]).nullable().optional(),
       })
       .parse(data)
   )
   .handler(async ({ data, context }) => {
     const parsed = parseDriveLink(data.link);
-    if (!parsed) throw new Error("Could not parse Google Drive link");
+    if (!parsed) {
+      throw new Error(
+        "INVALID_LINK: Could not parse Google Drive link. Use a folder/file share link like https://drive.google.com/drive/folders/<ID> or https://drive.google.com/file/d/<ID>/view"
+      );
+    }
 
     const { supabase } = context;
     const { data: jobs } = await supabase
@@ -67,6 +72,7 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
 
     const targets = files.filter((f) => isSupported(f.name, f.mimeType));
     const results: IngestResult[] = [];
+    let filteredByGender = 0;
 
     for (const f of targets) {
       try {
@@ -77,6 +83,18 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
           continue;
         }
         const ex = await extractCandidateFromText(text, openJobs);
+
+        // Gender filter
+        const wantGender = data.genderFilter && data.genderFilter !== "any" ? data.genderFilter : null;
+        if (wantGender && ex.gender && ex.gender !== wantGender) {
+          filteredByGender += 1;
+          results.push({
+            source_name: f.name,
+            ok: false,
+            error: `FILTERED_GENDER: ${ex.full_name || f.name} (${ex.gender})`,
+          });
+          continue;
+        }
 
         // Reject duplicates by email (case-insensitive)
         if (ex.email) {
