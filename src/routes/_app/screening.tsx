@@ -50,7 +50,7 @@ function ScreeningPage() {
       setDriveHealth({ ...res, checkedAt: Date.now() });
       return res;
     } catch (err) {
-      const r = { ok: false, latencyMs: 0, error: (err as Error).message, checkedAt: Date.now() };
+      const r = { ok: false, status: undefined as number | undefined, latencyMs: 0, error: (err as Error).message, checkedAt: Date.now() };
       setDriveHealth(r);
       return r;
     } finally {
