@@ -308,14 +308,47 @@ function ScreeningPage() {
           <Input
             value={link}
             onChange={(e) => setLink(e.target.value)}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData("text");
+              if (pasted) {
+                e.preventDefault();
+                setLink(pasted.trim());
+              }
+            }}
             placeholder="https://drive.google.com/drive/folders/…"
             dir="ltr"
+            spellCheck={false}
           />
-          <p className="text-xs text-muted-foreground">
-            {lang === "ar"
-              ? "يدعم: مجلد كامل أو ملف واحد. الصيغ: PDF و DOCX و TXT."
-              : "Supports: a whole folder or a single file. Formats: PDF, DOCX, TXT."}
-          </p>
+          {(() => {
+            const parsed = parseDriveLinkClient(link);
+            if (!link.trim()) {
+              return (
+                <p className="text-xs text-muted-foreground">
+                  {lang === "ar"
+                    ? "يدعم: مجلد كامل أو ملف واحد. الصيغ: PDF و DOCX و TXT. تأكد أن المشاركة \"أي شخص لديه الرابط\" أو مع حساب الخدمة."
+                    : "Supports: a whole folder or a single file. Formats: PDF, DOCX, TXT. Make sure sharing is set to 'Anyone with the link' or shared with the service account."}
+                </p>
+              );
+            }
+            if (!parsed) {
+              return (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {lang === "ar"
+                    ? "تعذر تحليل الرابط. الصق رابط Drive كاملاً مثل: https://drive.google.com/drive/folders/<ID>"
+                    : "Could not parse this link. Paste a full Drive URL like: https://drive.google.com/drive/folders/<ID>"}
+                </p>
+              );
+            }
+            return (
+              <p className="text-xs text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {lang === "ar"
+                  ? `${parsed.kind === "folder" ? "مجلد" : "ملف"} مكتشف · المعرّف: ${parsed.id.slice(0, 12)}…`
+                  : `${parsed.kind === "folder" ? "Folder" : "File"} detected · ID: ${parsed.id.slice(0, 12)}…`}
+              </p>
+            );
+          })()}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
