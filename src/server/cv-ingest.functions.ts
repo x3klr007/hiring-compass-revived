@@ -168,6 +168,7 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
     return {
       total: targets.length,
       skipped: files.length - targets.length,
+      filteredByGender,
       results,
     };
   });
