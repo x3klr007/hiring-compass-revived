@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
@@ -25,6 +25,7 @@ function ScreeningPage() {
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<IngestResult[]>([]);
   const [summary, setSummary] = useState<{ total: number; skipped: number } | null>(null);
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     supabase
@@ -43,11 +44,12 @@ function ScreeningPage() {
     setRunning(true);
     setResults([]);
     setSummary(null);
+    setAuthError(false);
     try {
       const { data: sess } = await supabase.auth.getSession();
       const token = sess.session?.access_token;
       if (!token) {
-        toast.error(lang === "ar" ? "يرجى تسجيل الدخول" : "Please sign in");
+        setAuthError(true);
         setRunning(false);
         return;
       }
@@ -68,7 +70,12 @@ function ScreeningPage() {
           : `Imported ${ok} of ${res.total} candidates`
       );
     } catch (err) {
-      toast.error((err as Error).message);
+      const msg = (err as Error).message || "";
+      if (/401|unauthor|jwt|token|sign(\s|-)?in/i.test(msg)) {
+        setAuthError(true);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setRunning(false);
     }
@@ -87,6 +94,27 @@ function ScreeningPage() {
             : "Paste a Google Drive folder/file link. The AI reads each CV, extracts the candidate's info, infers gender, and suggests matching positions."}
         </p>
       </div>
+
+      {authError && (
+        <Card className="glass border-destructive/50 p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <div className="font-medium">
+              {lang === "ar" ? "انتهت جلستك" : "Your session has expired"}
+            </div>
+            <div className="text-muted-foreground mt-1">
+              {lang === "ar"
+                ? "يرجى تسجيل الدخول مرة أخرى لمتابعة الفرز الذكي."
+                : "Please sign in again to continue running AI screening."}
+            </div>
+          </div>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/auth">
+              {lang === "ar" ? "تسجيل الدخول" : "Sign in"}
+            </Link>
+          </Button>
+        </Card>
+      )}
 
       <Card className="glass shadow-elegant p-6 space-y-4">
         <div className="space-y-2">
