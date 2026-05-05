@@ -27,8 +27,16 @@ function ScreeningPage() {
   const [results, setResults] = useState<IngestResult[]>([]);
   const [summary, setSummary] = useState<{ total: number; skipped: number } | null>(null);
   const [authError, setAuthError] = useState(false);
+  type Breaker = { state: "CLOSED" | "OPEN" | "HALF_OPEN"; failures: number; cooldownRemainingMs: number; lastError?: string };
   const [driveHealth, setDriveHealth] = useState<
-    { ok: boolean; status?: number; latencyMs: number; error?: string; checkedAt: number } | null
+    {
+      ok: boolean;
+      status?: number;
+      latencyMs: number;
+      error?: string;
+      breaker?: Breaker;
+      checkedAt: number;
+    } | null
   >(null);
   const [healthChecking, setHealthChecking] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
