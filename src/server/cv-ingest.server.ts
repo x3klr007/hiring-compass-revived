@@ -155,6 +155,14 @@ export function parseDriveLink(input: string): { kind: "folder" | "file"; id: st
 export type DriveFile = { id: string; name: string; mimeType: string; size?: string };
 
 async function fetchWithRetry(url: string, init: RequestInit, label: string): Promise<Response> {
+  // Circuit breaker short-circuit
+  if (shouldShortCircuit()) {
+    const snap = breakerSnapshot();
+    console.warn(`[${label}] short-circuited by breaker (cooldown ${snap.cooldownRemainingMs}ms)`);
+    throw new CircuitOpenError(snap.cooldownRemainingMs, snap.lastError);
+  }
+  // In HALF_OPEN we only allow a single probe attempt
+  const isProbe = BREAKER.state === "HALF_OPEN";
   const MAX = 4;
   let lastErr: unknown;
   let lastStatus: number | undefined;
