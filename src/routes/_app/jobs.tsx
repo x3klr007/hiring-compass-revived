@@ -124,14 +124,13 @@ function JobsPage() {
   const filteredJobs = useMemo(() => {
     return allJobs.filter((j) => {
       if (statuses.size && !statuses.has(j.status)) return false;
-      if (priorities.size && !priorities.has(j.priority)) return false;
       if (debouncedSearch) {
         const hay = `${j.title} ${j.job_code}`.toLowerCase();
         if (!hay.includes(debouncedSearch)) return false;
       }
       return true;
     });
-  }, [allJobs, statuses, priorities, debouncedSearch]);
+  }, [allJobs, statuses, debouncedSearch]);
 
   const sortedJobs = useMemo(() => {
     if (sortBy === "default") return filteredJobs;
