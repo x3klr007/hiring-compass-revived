@@ -140,12 +140,55 @@ function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gradient">{t("dashboard")}</h1>
-        <p className="text-muted-foreground">{t("overview")}</p>
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gradient">{t("dashboard")}</h1>
+          <p className="text-muted-foreground">{t("overview")}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={regionFilter}
+            onValueChange={(v) => {
+              setRegionFilter(v);
+              setBranchFilter("all");
+            }}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder={ar ? "المنطقة" : "Region"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{ar ? "كل المناطق" : "All regions"}</SelectItem>
+              {availableRegions.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder={ar ? "الفرع" : "Branch"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{ar ? "كل الفروع" : "All branches"}</SelectItem>
+              {availableBranches.map((b) => (
+                <SelectItem key={b} value={b}>{b}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setRegionFilter("all");
+                setBranchFilter("all");
+              }}
+            >
+              <X className="h-4 w-4 mr-1" />
+              {ar ? "مسح" : "Clear"}
+            </Button>
+          )}
+        </div>
       </div>
-
-      {/* Hero Fill Rate */}
       <Card className="glass shadow-elegant overflow-hidden relative">
         <div
           className="absolute inset-0 opacity-30 pointer-events-none"
