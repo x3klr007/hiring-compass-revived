@@ -13,6 +13,7 @@ import {
   LogOut,
   Languages,
   Compass,
+  AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n, type TKey } from "@/contexts/I18nContext";
@@ -31,6 +32,7 @@ const NAV: NavItem[] = [
   { to: "/ai-chat", key: "aiChat", icon: Bot },
   { to: "/templates", key: "templates", icon: Mail, admin: true },
   { to: "/audit", key: "auditLog", icon: ScrollText, admin: true },
+  { to: "/drive-failures", key: "driveFailures", icon: AlertCircle, admin: true },
   { to: "/settings", key: "settings", icon: Settings, admin: true },
 ];
 

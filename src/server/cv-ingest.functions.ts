@@ -18,6 +18,44 @@ export const checkDriveHealth = createServerFn({ method: "GET" })
     return await checkDriveGateway();
   });
 
+export type DriveFailureLog = {
+  id: string;
+  created_at: string;
+  req_id: string | null;
+  folder_id: string | null;
+  url: string | null;
+  status: string | null;
+  total_ms: number | null;
+  attempts: number | null;
+  reason: string | null;
+  suggestion: string | null;
+};
+
+export const listDriveFailures = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<DriveFailureLog[]> => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("drive_failure_logs")
+      .select("id,created_at,req_id,folder_id,url,status,total_ms,attempts,reason,suggestion")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as DriveFailureLog[];
+  });
+
+export const clearDriveFailures = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("drive_failure_logs")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 const SUPPORTED_MIME = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

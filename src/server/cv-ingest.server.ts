@@ -330,6 +330,52 @@ async function fetchWithRetry(
   throw new Error(`${label} ${reason}`);
 }
 
+export function suggestFixForDriveFailure(input: { status?: string | number; reason?: string }): string {
+  const status = String(input.status ?? "");
+  const r = (input.reason ?? "").toLowerCase();
+  if (status === "401" || /unauthor|invalid.*token|jwt/i.test(r))
+    return "أعد ربط Google Drive من Connectors (الصلاحية منتهية).";
+  if (status === "403" || /forbidden|permission|insufficient/i.test(r))
+    return "تأكد أن المجلد مشاركتُه تسمح للحساب الموصول، وأن الـ scope يشمل drive.readonly.";
+  if (status === "404" || /not found/i.test(r))
+    return "تحقق من صحة معرّف المجلد (folderId) أو أنه لم يُحذف/يُنقل.";
+  if (status === "429" || /rate.?limit|quota/i.test(r))
+    return "تجاوزت حصة Drive API. انتظر قليلاً وأعد المحاولة.";
+  if (status === "500" || status === "502" || status === "503" || status === "504")
+    return "خطأ مؤقت في بوابة Drive — أعد المحاولة بعد قليل (سيتعامل Circuit Breaker معه).";
+  if (/connection refused|delayed connect|econnrefused|enotfound|fetch failed|upstream connect error|reset/i.test(r))
+    return "مشكلة شبكية مع البوابة — تحقق من حالة الخدمة وأعد المحاولة.";
+  if (/circuit_open/i.test(r))
+    return "الدائرة مفتوحة حالياً — انتظر انتهاء فترة التهدئة قبل المحاولة.";
+  return "راجع تفاصيل السجل وأعد المحاولة، وإن تكرر فاتصل بالدعم.";
+}
+
+async function persistDriveFailure(entry: {
+  reqId: string;
+  folderId?: string;
+  url: string;
+  status: string | number;
+  totalMs: number;
+  attempts?: number;
+  reason: string;
+}) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("drive_failure_logs").insert({
+      req_id: entry.reqId,
+      folder_id: entry.folderId ?? null,
+      url: entry.url,
+      status: String(entry.status),
+      total_ms: entry.totalMs,
+      attempts: entry.attempts ?? null,
+      reason: entry.reason.slice(0, 1000),
+      suggestion: suggestFixForDriveFailure({ status: entry.status, reason: entry.reason }),
+    });
+  } catch (e) {
+    console.warn(`[drive-failure-log] persist skipped: ${(e as Error).message}`);
+  }
+}
+
 export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
   const reqId = newReqId("list");
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
@@ -340,6 +386,7 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
     const totalMs = Date.now() - start;
     const detail = `LIST_FAILED reqId=${reqId} folderId=${folderId} status=${status} totalMs=${totalMs} url=${url} reason=${reason}`;
     console.error(`[listDriveFolder][${reqId}] ${detail}`);
+    void persistDriveFailure({ reqId, folderId, url, status, totalMs, reason });
     throw new Error(detail);
   };
   let res: Response;

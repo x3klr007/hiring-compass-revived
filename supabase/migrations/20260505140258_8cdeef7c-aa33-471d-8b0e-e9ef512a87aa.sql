@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.trim_drive_failure_logs() FROM PUBLIC, anon, authenticated;
