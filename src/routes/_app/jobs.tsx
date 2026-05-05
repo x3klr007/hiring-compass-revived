@@ -300,16 +300,22 @@ function JobsPage() {
               {sortDir === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
             </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            disabled={!filteredJobs.length}
-            onClick={() => exportJobsToXlsx(filteredJobs)}
-          >
-            <Download className="h-3.5 w-3.5" />
-            {t("exportExcel")}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={!filteredJobs.length}>
+                <Download className="h-3.5 w-3.5" />
+                {ar ? "تصدير" : "Export"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportJobsToXlsx(filteredJobs)}>
+                {ar ? "Excel (.xlsx)" : "Excel (.xlsx)"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportJobsToCsv(filteredJobs)}>
+                {ar ? "CSV (.csv)" : "CSV (.csv)"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex flex-wrap gap-4">
