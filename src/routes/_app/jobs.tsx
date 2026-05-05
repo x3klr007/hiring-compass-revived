@@ -50,7 +50,6 @@ type Job = {
   headcount: number;
   hired_count: number;
   status: string;
-  priority: string;
   description?: string | null;
   opened_at?: string | null;
   target_fill_date?: string | null;
