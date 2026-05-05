@@ -213,14 +213,29 @@ function ScreeningPage() {
       )}
 
       {lastError && !authError && (() => {
-        const m = lastError.match(/LIST_FAILED reqId=(\S+) folderId=(\S+) status=(\S+) totalMs=(\d+) url=(\S+) reason=([\s\S]*)$/);
+        const m = lastError.match(/LIST_FAILED reqId=(\S+) folderId=(\S+) status=(\S+) totalMs=(\d+)(?: attempts=(\d+))? url=(\S+) reason=([\s\S]*?)(?: metrics=(\{[\s\S]*\}))?$/);
         const isListFail = !!m;
         const reqId = m?.[1];
         const folderId = m?.[2];
         const status = m?.[3];
         const totalMs = m?.[4];
-        const url = m?.[5];
-        const reason = m?.[6];
+        const attempts = m?.[5];
+        const url = m?.[6];
+        const reason = m?.[7];
+        let metrics: {
+          attempts: number;
+          transientHits: number;
+          connErrors: number;
+          attemptDurations: number[];
+          retryDelays: number[];
+        } | null = null;
+        try {
+          if (m?.[8]) metrics = JSON.parse(m[8]);
+        } catch { /* noop */ }
+        const totalNum = totalMs ? Number(totalMs) : 0;
+        const maxBar = metrics
+          ? Math.max(1, ...metrics.attemptDurations, ...metrics.retryDelays)
+          : 1;
         return (
           <Card className="glass border-destructive/50 p-4 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
@@ -229,15 +244,67 @@ function ScreeningPage() {
                 {lang === "ar" ? "فشل جلب ملفات Drive" : "Failed to fetch Drive files"}
               </div>
               {isListFail ? (
-                <div className="mt-2 space-y-1">
+                <div className="mt-2 space-y-2">
                   <div className="text-muted-foreground break-words">
                     {lang === "ar" ? "السبب:" : "Reason:"} <span className="text-foreground">{reason}</span>
                   </div>
+
+                  {metrics && (
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 font-mono">
+                          {lang === "ar" ? "محاولات" : "attempts"}: <strong>{metrics.attempts}</strong>
+                        </span>
+                        <span className="rounded-full bg-foreground/10 px-2 py-0.5 font-mono">
+                          {lang === "ar" ? "المهلة الفعلية" : "total"}: <strong>{totalNum}ms</strong>
+                        </span>
+                        <span className="rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 font-mono">
+                          5xx/transient: <strong>{metrics.transientHits}</strong>
+                        </span>
+                        <span className="rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-400 px-2 py-0.5 font-mono">
+                          conn-err: <strong>{metrics.connErrors}</strong>
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="text-[11px] text-muted-foreground">
+                          {lang === "ar"
+                            ? "زمن كل محاولة (أزرق) ومدة الانتظار قبل المحاولة التالية (رمادي):"
+                            : "Per-attempt duration (blue) and pre-retry sleep (grey):"}
+                        </div>
+                        {metrics.attemptDurations.map((d, i) => (
+                          <div key={i} className="flex items-center gap-2 text-[11px] font-mono">
+                            <span className="w-6 text-muted-foreground">#{i + 1}</span>
+                            <div className="flex-1 flex items-center gap-1">
+                              <div
+                                className="h-3 rounded bg-primary/70"
+                                style={{ width: `${(d / maxBar) * 100}%`, minWidth: 2 }}
+                                title={`fetch ${d}ms`}
+                              />
+                              <span className="text-foreground w-14">{d}ms</span>
+                              {metrics!.retryDelays[i] !== undefined && (
+                                <>
+                                  <div
+                                    className="h-3 rounded bg-muted-foreground/40"
+                                    style={{ width: `${(metrics!.retryDelays[i] / maxBar) * 100}%`, minWidth: 2 }}
+                                    title={`sleep ${metrics!.retryDelays[i]}ms`}
+                                  />
+                                  <span className="text-muted-foreground w-14">+{metrics!.retryDelays[i]}ms</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono text-muted-foreground">
                     <div>reqId: <span className="text-foreground">{reqId}</span></div>
                     <div>status: <span className="text-foreground">{status}</span></div>
                     <div>folderId: <span className="text-foreground break-all">{folderId}</span></div>
                     <div>duration: <span className="text-foreground">{totalMs}ms</span></div>
+                    {attempts && <div>attempts: <span className="text-foreground">{attempts}</span></div>}
                     <div className="sm:col-span-2 break-all">url: <span className="text-foreground">{url}</span></div>
                   </div>
                   <details className="text-xs mt-1">
