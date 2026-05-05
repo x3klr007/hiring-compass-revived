@@ -698,7 +698,7 @@ function Chip({
 
 function labelForSort(sortBy: string, t: (k: any) => string) {
   switch (sortBy) {
-    case "priority": return t("priority");
+    
     case "region": return t("region");
     case "branch": return t("branch");
     case "remaining": return t("remainingVacancies");
