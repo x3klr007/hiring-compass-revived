@@ -268,7 +268,6 @@ function JobsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">{t("default")}</SelectItem>
-                <SelectItem value="priority">{t("priority")}</SelectItem>
                 <SelectItem value="region">{t("region")}</SelectItem>
                 <SelectItem value="branch">{t("branch")}</SelectItem>
                 <SelectItem value="remaining">{t("remainingVacancies")}</SelectItem>
