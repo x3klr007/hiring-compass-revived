@@ -80,15 +80,9 @@ function JobsPage() {
   const [search, setSearch] = useState(search_.q ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState((search_.q ?? "").toLowerCase());
   const statuses = useMemo<Set<string>>(() => new Set<string>(search_.status ?? []), [search_.status]);
-  const priorities = useMemo<Set<string>>(() => new Set<string>(search_.priority ?? []), [search_.priority]);
   const setStatuses = (s: Set<string>) =>
     navigate({
       search: (prev: JobsSearch) => ({ ...prev, status: s.size ? [...s] : undefined }),
-      replace: true,
-    });
-  const setPriorities = (s: Set<string>) =>
-    navigate({
-      search: (prev: JobsSearch) => ({ ...prev, priority: s.size ? [...s] : undefined }),
       replace: true,
     });
 
