@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_app/jobs")({ component: JobsPage });
@@ -21,24 +24,28 @@ type Job = {
   priority: string;
 };
 
-// Mirrors the workbook ordering: HQ + existing branches first, new branches after
 const REGION_ORDER = [
-  "Riyadh",
-  "Jeddah",
-  "Qassim",
-  "Eastern Province",
-  "Madinah",
-  "Hail",
-  "Abha",
-  "Al-Ahsa",
-  "Makkah",
-  "Jazan",
+  "Riyadh", "Jeddah", "Qassim", "Eastern Province", "Madinah",
+  "Hail", "Abha", "Al-Ahsa", "Makkah", "Jazan",
 ];
 const BRANCH_ORDER = ["Headquarters", "Boys School", "Girls School"];
 
+const STATUS_OPTIONS = ["Open", "Filled", "On Hold"];
+const PRIORITY_OPTIONS = ["High", "Normal"];
+
 function JobsPage() {
   const { t, lang } = useI18n();
+  const ar = lang === "ar";
   const [tab, setTab] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statuses, setStatuses] = useState<Set<string>>(new Set());
+  const [priorities, setPriorities] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 200);
+    return () => clearTimeout(id);
+  }, [search]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["jobs"],
@@ -52,10 +59,23 @@ function JobsPage() {
     },
   });
 
+  const allJobs = data ?? [];
+
+  const filteredJobs = useMemo(() => {
+    return allJobs.filter((j) => {
+      if (statuses.size && !statuses.has(j.status)) return false;
+      if (priorities.size && !priorities.has(j.priority)) return false;
+      if (debouncedSearch) {
+        const hay = `${j.title} ${j.job_code}`.toLowerCase();
+        if (!hay.includes(debouncedSearch)) return false;
+      }
+      return true;
+    });
+  }, [allJobs, statuses, priorities, debouncedSearch]);
+
   const grouped = useMemo(() => {
-    const jobs = data ?? [];
     const byRegion = new Map<string, Map<string, Job[]>>();
-    for (const j of jobs) {
+    for (const j of filteredJobs) {
       if (!byRegion.has(j.region)) byRegion.set(j.region, new Map());
       const br = byRegion.get(j.region)!;
       if (!br.has(j.branch)) br.set(j.branch, []);
@@ -64,23 +84,42 @@ function JobsPage() {
     const regions = REGION_ORDER.filter((r) => byRegion.has(r)).concat(
       [...byRegion.keys()].filter((r) => !REGION_ORDER.includes(r)),
     );
-    return { jobs, byRegion, regions };
-  }, [data]);
+    return { byRegion, regions };
+  }, [filteredJobs]);
 
-  const totals = useMemo(() => {
-    const jobs = data ?? [];
-    return {
-      total: jobs.length,
-      open: jobs.filter((j) => j.status === "Open").length,
-      regions: new Set(jobs.map((j) => j.region)).size,
-      branches: new Set(jobs.map((j) => `${j.region}|${j.branch}`)).size,
-    };
-  }, [data]);
+  // Reset tab if filters wiped out the active region
+  useEffect(() => {
+    if (tab !== "all" && !grouped.regions.includes(tab)) setTab("all");
+  }, [grouped.regions, tab]);
+
+  const totals = useMemo(
+    () => ({
+      total: filteredJobs.length,
+      open: filteredJobs.filter((j) => j.status === "Open").length,
+      regions: new Set(filteredJobs.map((j) => j.region)).size,
+      branches: new Set(filteredJobs.map((j) => `${j.region}|${j.branch}`)).size,
+    }),
+    [filteredJobs],
+  );
 
   const visibleRegions =
     tab === "all" ? grouped.regions : grouped.regions.filter((r) => r === tab);
 
-  const ar = lang === "ar";
+  const activeFilters =
+    (debouncedSearch ? 1 : 0) + statuses.size + priorities.size;
+
+  const toggle = (set: Set<string>, val: string, setter: (s: Set<string>) => void) => {
+    const next = new Set(set);
+    if (next.has(val)) next.delete(val);
+    else next.add(val);
+    setter(next);
+  };
+
+  const clearAll = () => {
+    setSearch("");
+    setStatuses(new Set());
+    setPriorities(new Set());
+  };
 
   return (
     <div className="space-y-6">
@@ -92,20 +131,84 @@ function JobsPage() {
           </p>
         </div>
         <div className="flex gap-2 text-sm">
-          <SummaryStat label={ar ? "إجمالي الشواغر" : "Total Vacancies"} value={totals.total} accent />
+          <SummaryStat
+            label={ar ? "إجمالي الشواغر" : "Total Vacancies"}
+            value={totals.total}
+            sub={activeFilters ? `${t("of")} ${allJobs.length}` : undefined}
+            accent
+          />
           <SummaryStat label={ar ? "مفتوح" : "Open"} value={totals.open} />
           <SummaryStat label={ar ? "المناطق" : "Regions"} value={totals.regions} />
           <SummaryStat label={ar ? "الفروع" : "Branches"} value={totals.branches} />
         </div>
       </div>
 
+      {/* Filter toolbar */}
+      <Card className="glass shadow-elegant p-4 space-y-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className="ps-9"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute top-1/2 -translate-y-1/2 end-2 p-1 rounded hover:bg-muted"
+                aria-label={t("clearFilters")}
+              >
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          {activeFilters > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearAll} className="gap-1">
+              <X className="h-3.5 w-3.5" />
+              {t("clearFilters")}
+              <Badge variant="secondary" className="ms-1">{activeFilters}</Badge>
+            </Button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-4">
+          <FilterGroup label={t("status")}>
+            {STATUS_OPTIONS.map((s) => (
+              <Chip
+                key={s}
+                active={statuses.has(s)}
+                onClick={() => toggle(statuses, s, setStatuses)}
+              >
+                {s}
+              </Chip>
+            ))}
+          </FilterGroup>
+          <FilterGroup label={t("priority")}>
+            {PRIORITY_OPTIONS.map((p) => (
+              <Chip
+                key={p}
+                active={priorities.has(p)}
+                onClick={() => toggle(priorities, p, setPriorities)}
+                tone={p === "High" ? "destructive" : "default"}
+              >
+                {p}
+              </Chip>
+            ))}
+          </FilterGroup>
+        </div>
+      </Card>
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="all">{ar ? "الكل" : "All"}</TabsTrigger>
+          <TabsTrigger value="all">
+            {ar ? "الكل" : "All"}
+            <span className="ms-1 text-xs opacity-70">({totals.total})</span>
+          </TabsTrigger>
           {grouped.regions.map((r) => {
             const count = [...(grouped.byRegion.get(r)?.values() ?? [])].reduce(
-              (a, arr) => a + arr.length,
-              0,
+              (a, arr) => a + arr.length, 0,
             );
             return (
               <TabsTrigger key={r} value={r} className="gap-2">
@@ -119,18 +222,22 @@ function JobsPage() {
         <TabsContent value={tab} className="space-y-6 mt-6">
           {isLoading ? (
             <Card className="p-6 text-muted-foreground">{t("loading")}</Card>
-          ) : !data?.length ? (
+          ) : !allJobs.length ? (
             <Card className="p-6 text-muted-foreground">{t("noData")}</Card>
+          ) : !filteredJobs.length ? (
+            <Card className="p-10 text-center text-muted-foreground space-y-3">
+              <div>{t("noMatches")}</div>
+              <Button variant="outline" size="sm" onClick={clearAll}>
+                {t("clearFilters")}
+              </Button>
+            </Card>
           ) : (
             visibleRegions.map((region) => {
               const branches = grouped.byRegion.get(region)!;
               const ordered = BRANCH_ORDER.filter((b) => branches.has(b)).concat(
                 [...branches.keys()].filter((b) => !BRANCH_ORDER.includes(b)),
               );
-              const regionTotal = [...branches.values()].reduce(
-                (a, arr) => a + arr.length,
-                0,
-              );
+              const regionTotal = [...branches.values()].reduce((a, arr) => a + arr.length, 0);
               return (
                 <Card key={region} className="glass shadow-elegant overflow-hidden">
                   <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
@@ -165,8 +272,12 @@ function JobsPage() {
                             <tbody>
                               {list.map((j) => (
                                 <tr key={j.id} className="border-t border-border/60">
-                                  <td className="px-5 py-2 font-mono text-xs">{j.job_code}</td>
-                                  <td className="px-4 py-2">{j.title}</td>
+                                  <td className="px-5 py-2 font-mono text-xs">
+                                    <Highlight text={j.job_code} match={debouncedSearch} />
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <Highlight text={j.title} match={debouncedSearch} />
+                                  </td>
                                   <td className="px-4 py-2">
                                     <Badge variant={j.priority === "High" ? "destructive" : "outline"}>
                                       {j.priority}
@@ -197,7 +308,9 @@ function JobsPage() {
   );
 }
 
-function SummaryStat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+function SummaryStat({
+  label, value, sub, accent,
+}: { label: string; value: number; sub?: string; accent?: boolean }) {
   return (
     <div
       className={`rounded-md border px-3 py-2 min-w-[110px] ${
@@ -205,8 +318,47 @@ function SummaryStat({ label, value, accent }: { label: string; value: number; a
       }`}
     >
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-xl font-semibold">{value}</div>
+      <div className="text-xl font-semibold">
+        {value}
+        {sub && <span className="ms-1 text-xs font-normal text-muted-foreground">{sub}</span>}
+      </div>
     </div>
+  );
+}
+
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        {label}
+      </span>
+      <div className="flex gap-1.5 flex-wrap">{children}</div>
+    </div>
+  );
+}
+
+function Chip({
+  active, onClick, children, tone = "default",
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  tone?: "default" | "destructive";
+}) {
+  const activeClass =
+    tone === "destructive"
+      ? "bg-destructive text-destructive-foreground border-destructive"
+      : "bg-primary text-primary-foreground border-primary";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+        active ? activeClass : "bg-background hover:bg-muted border-border"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -214,4 +366,19 @@ function BranchIcon({ branch }: { branch: string }) {
   const emoji =
     branch === "Headquarters" ? "🏛️" : branch === "Girls School" ? "👩‍🏫" : branch === "Boys School" ? "👨‍🏫" : "📍";
   return <span aria-hidden>{emoji}</span>;
+}
+
+function Highlight({ text, match }: { text: string; match: string }) {
+  if (!match) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(match);
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-primary/25 text-foreground rounded px-0.5">
+        {text.slice(idx, idx + match.length)}
+      </mark>
+      {text.slice(idx + match.length)}
+    </>
+  );
 }
