@@ -348,12 +348,10 @@ function JobsPage() {
               allJobs={allJobs}
               search={debouncedSearch}
               statuses={statuses}
-              priorities={priorities}
               region={tab}
               onClearAll={clearAll}
               onClearSearch={() => setSearch("")}
               onClearStatuses={() => setStatuses(new Set())}
-              onClearPriorities={() => setPriorities(new Set())}
               onClearRegion={() => setTab("all")}
               onPickJob={setSelectedJob}
             />
