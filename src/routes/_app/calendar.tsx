@@ -31,6 +31,8 @@ type IV = {
 function CalendarPage() {
   const { t, lang, dir } = useI18n();
   const schedule = useServerFn(scheduleInterview);
+  const sendInvite = useServerFn(sendInterviewInvite);
+  const { user } = useAuth();
   const [cands, setCands] = useState<Cand[]>([]);
   const [items, setItems] = useState<IV[]>([]);
   const [busy, setBusy] = useState(false);
