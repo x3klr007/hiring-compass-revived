@@ -211,20 +211,24 @@ function backoffDelay(attempt: number, base: number, factor: number, max: number
   return Math.max(0, Math.round(raw * j));
 }
 
+function newReqId(prefix = "req") {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 async function fetchWithRetry(
   url: string,
   init: RequestInit,
   label: string,
   policy: RetryPolicy = DEFAULT_RETRY_POLICY,
+  reqId: string = newReqId("fetch"),
 ): Promise<Response> {
   // Circuit breaker short-circuit
   if (shouldShortCircuit()) {
     const snap = breakerSnapshot();
-    console.warn(`[${label}] short-circuited by breaker (cooldown ${snap.cooldownRemainingMs}ms)`);
+    console.warn(`[${label}][${reqId}] short-circuited by breaker (cooldown ${snap.cooldownRemainingMs}ms)`);
     throw new CircuitOpenError(snap.cooldownRemainingMs, snap.lastError);
   }
   const isProbe = BREAKER.state === "HALF_OPEN";
-  // HALF_OPEN: only one probe attempt regardless of policy
   const baseMax = isProbe ? 1 : policy.maxAttempts;
   let lastErr: unknown;
   let lastStatus: number | undefined;
@@ -235,32 +239,30 @@ async function fetchWithRetry(
   const hasConnKey = headerKeys.includes("X-Connection-Api-Key");
 
   let attempt = 0;
-  // Use a while loop so we can grant bonus attempts dynamically for connection errors
   while (true) {
     attempt += 1;
     const t0 = Date.now();
     let connError = false;
     try {
       console.log(
-        `[${label}] attempt ${attempt} → ${url} (auth=${hasAuth}, connKey=${hasConnKey}, probe=${isProbe}, connRetries=${connectionRetriesUsed})`,
+        `[${label}][${reqId}] attempt ${attempt} → ${url} (auth=${hasAuth}, connKey=${hasConnKey}, probe=${isProbe}, connRetries=${connectionRetriesUsed})`,
       );
       const res = await fetch(url, init);
       const dur = Date.now() - t0;
       lastStatus = res.status;
       if (isTransientStatus(res.status)) {
         lastBody = await res.clone().text().catch(() => "<unreadable>");
-        // Even non-connection transient HTTP errors retry within baseMax
         if (attempt < baseMax) {
           const delay = backoffDelay(attempt, policy.baseDelayMs, policy.factor, policy.maxDelayMs, policy.jitter);
-          console.warn(`[${label}] attempt ${attempt} transient ${res.status} in ${dur}ms — retrying in ${delay}ms`);
+          console.warn(`[${label}][${reqId}] attempt ${attempt} transient ${res.status} in ${dur}ms — retrying in ${delay}ms`);
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }
         recordFailure(`HTTP ${res.status}`);
-        console.error(`[${label}] FAILED after ${attempt} attempts — HTTP ${res.status}`);
+        console.error(`[${label}][${reqId}] FAILED after ${attempt} attempts — HTTP ${res.status}`);
         throw new Error(`${label} last status ${res.status}: ${lastBody?.slice(0, 300) ?? ""}`);
       }
-      console.log(`[${label}] attempt ${attempt} done status=${res.status} in ${dur}ms`);
+      console.log(`[${label}][${reqId}] attempt ${attempt} done status=${res.status} in ${dur}ms`);
       recordSuccess();
       return res;
     } catch (err) {
@@ -268,9 +270,8 @@ async function fetchWithRetry(
       const msg = (err as Error)?.message ?? "unknown";
       lastErr = err;
       connError = isConnectionError(msg);
-      console.warn(`[${label}] attempt ${attempt} threw in ${dur}ms (connError=${connError}): ${msg}`);
+      console.warn(`[${label}][${reqId}] attempt ${attempt} threw in ${dur}ms (connError=${connError}): ${msg}`);
 
-      // Bonus attempts specifically for connection-level errors
       const allowance =
         baseMax + (connError && !isProbe ? policy.connectionErrorBonusAttempts : 0);
       if (attempt < allowance) {
@@ -284,7 +285,7 @@ async function fetchWithRetry(
               policy.jitter,
             )
           : backoffDelay(attempt, policy.baseDelayMs, policy.factor, policy.maxDelayMs, policy.jitter);
-        console.warn(`[${label}] retrying in ${delay}ms (allowance=${allowance})`);
+        console.warn(`[${label}][${reqId}] retrying in ${delay}ms (allowance=${allowance})`);
         await new Promise((r) => setTimeout(r, delay));
         continue;
       }
@@ -295,44 +296,47 @@ async function fetchWithRetry(
     ? `network error: ${(lastErr as Error)?.message ?? "unknown"}`
     : `last status ${lastStatus}: ${lastBody?.slice(0, 300) ?? ""}`;
   console.error(
-    `[${label}] FAILED after ${attempt} attempts (connRetries=${connectionRetriesUsed}) — url=${url}, ${reason}`,
+    `[${label}][${reqId}] FAILED after ${attempt} attempts (connRetries=${connectionRetriesUsed}) — url=${url}, ${reason}`,
   );
   recordFailure(reason);
   throw new Error(`${label} ${reason}`);
 }
 
 export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
+  const reqId = newReqId("list");
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
   const url = `${DRIVE_GATEWAY}/files?q=${q}&fields=files(id,name,mimeType,size)&pageSize=200`;
   const start = Date.now();
-  console.log(`[listDriveFolder] folderId=${folderId} url=${url}`);
+  console.log(`[listDriveFolder][${reqId}] folderId=${folderId} url=${url}`);
   let res: Response;
   try {
-    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list");
+    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list", DEFAULT_RETRY_POLICY, reqId);
   } catch (err) {
-    console.error(`[listDriveFolder] giving up after ${Date.now() - start}ms — folderId=${folderId}`, err);
+    console.error(`[listDriveFolder][${reqId}] giving up after ${Date.now() - start}ms — folderId=${folderId}`, err);
     throw err;
   }
   if (!res.ok) {
     const body = await res.text();
-    console.error(`[listDriveFolder] non-OK status=${res.status} folderId=${folderId} totalMs=${Date.now() - start} body=${body.slice(0, 500)}`);
+    console.error(`[listDriveFolder][${reqId}] non-OK status=${res.status} folderId=${folderId} totalMs=${Date.now() - start} body=${body.slice(0, 500)}`);
     throw new Error(`Drive list failed [${res.status}]: ${body}`);
   }
   const json = (await res.json()) as { files?: DriveFile[] };
-  console.log(`[listDriveFolder] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
+  console.log(`[listDriveFolder][${reqId}] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
   return json.files ?? [];
 }
 
 export async function getDriveFileMeta(fileId: string): Promise<DriveFile> {
+  const reqId = newReqId("meta");
   const url = `${DRIVE_GATEWAY}/files/${fileId}?fields=id,name,mimeType,size`;
-  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive meta");
+  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive meta", DEFAULT_RETRY_POLICY, reqId);
   if (!res.ok) throw new Error(`Drive meta failed [${res.status}]: ${await res.text()}`);
   return (await res.json()) as DriveFile;
 }
 
 export async function downloadDriveFile(fileId: string): Promise<ArrayBuffer> {
+  const reqId = newReqId("dl");
   const url = `${DRIVE_GATEWAY}/files/${fileId}?alt=media`;
-  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive download");
+  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive download", DEFAULT_RETRY_POLICY, reqId);
   if (!res.ok) throw new Error(`Drive download failed [${res.status}]: ${await res.text()}`);
   return await res.arrayBuffer();
 }
