@@ -250,20 +250,45 @@ export function getRetryPolicySnapshot() {
   };
 }
 
-function envInt(name: string, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER): number {
+function envNum(
+  name: string,
+  fallback: number,
+  opts: { min: number; max: number; integer: boolean },
+): number {
   const raw = process.env[name];
-  if (!raw) return fallback;
-  const n = parseInt(raw, 10);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, n));
+  if (raw === undefined || raw === "") return fallback;
+  const trimmed = raw.trim();
+  const n = opts.integer ? parseInt(trimmed, 10) : parseFloat(trimmed);
+  if (!Number.isFinite(n)) {
+    RETRY_ENV_ISSUES.push({
+      name,
+      raw,
+      reason: `القيمة ليست رقمًا صالحًا — استخدمت الافتراضي ${fallback}.`,
+    });
+    return fallback;
+  }
+  if (opts.integer && !Number.isInteger(n)) {
+    RETRY_ENV_ISSUES.push({
+      name,
+      raw,
+      reason: `يجب أن تكون عددًا صحيحًا — استخدمت الافتراضي ${fallback}.`,
+    });
+    return fallback;
+  }
+  if (n < opts.min || n > opts.max) {
+    RETRY_ENV_ISSUES.push({
+      name,
+      raw,
+      reason: `خارج النطاق المسموح [${opts.min}-${opts.max}] — تم تثبيت القيمة عند الحد.`,
+    });
+    return Math.min(opts.max, Math.max(opts.min, n));
+  }
+  return n;
 }
-function envFloat(name: string, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER): number {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  const n = parseFloat(raw);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, n));
-}
+const envInt = (name: string, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER) =>
+  envNum(name, fallback, { min, max, integer: true });
+const envFloat = (name: string, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER) =>
+  envNum(name, fallback, { min, max, integer: false });
 
 export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   maxAttempts: envInt("DRIVE_RETRY_MAX_ATTEMPTS", 4, 1, 20),
@@ -274,6 +299,35 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   connectionErrorBonusAttempts: envInt("DRIVE_RETRY_CONN_BONUS", 3, 0, 20),
   connectionErrorBaseDelayMs: envInt("DRIVE_RETRY_CONN_BASE_DELAY_MS", 1_000, 0, 60_000),
 };
+
+// Cross-field sanity checks
+if (DEFAULT_RETRY_POLICY.maxDelayMs < DEFAULT_RETRY_POLICY.baseDelayMs) {
+  RETRY_ENV_ISSUES.push({
+    name: "DRIVE_RETRY_MAX_DELAY_MS",
+    raw: String(DEFAULT_RETRY_POLICY.maxDelayMs),
+    reason: `أقل من DRIVE_RETRY_BASE_DELAY_MS (${DEFAULT_RETRY_POLICY.baseDelayMs}) — لن يتم احترام الـ backoff.`,
+  });
+}
+if (DEFAULT_RETRY_POLICY.connectionErrorBaseDelayMs > DEFAULT_RETRY_POLICY.maxDelayMs) {
+  RETRY_ENV_ISSUES.push({
+    name: "DRIVE_RETRY_CONN_BASE_DELAY_MS",
+    raw: String(DEFAULT_RETRY_POLICY.connectionErrorBaseDelayMs),
+    reason: `أكبر من DRIVE_RETRY_MAX_DELAY_MS (${DEFAULT_RETRY_POLICY.maxDelayMs}) — سيتم تثبيتها عند الحد الأقصى.`,
+  });
+}
+
+export function getRetryEnvIssues(): EnvIssue[] {
+  return [...RETRY_ENV_ISSUES];
+}
+
+if (RETRY_ENV_ISSUES.length) {
+  console.warn(
+    `[retry-policy] تم اكتشاف ${RETRY_ENV_ISSUES.length} مشكلة في إعدادات إعادة المحاولة:\n` +
+      RETRY_ENV_ISSUES.map((i) => `  • ${i.name}="${i.raw}" → ${i.reason}`).join("\n"),
+  );
+} else {
+  console.log("[retry-policy] جميع متغيرات إعادة المحاولة صالحة.");
+}
 
 const CONNECTION_ERROR_RE =
   /(connection refused|delayed connect|econnrefused|econnreset|enotfound|eai_again|socket hang up|fetch failed|network|upstream connect error|disconnect\/reset before headers|reset reason)/i;
