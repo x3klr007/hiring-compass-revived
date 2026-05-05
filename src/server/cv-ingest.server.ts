@@ -205,6 +205,7 @@ async function fetchWithRetry(url: string, init: RequestInit, label: string): Pr
     ? `network error: ${(lastErr as Error)?.message ?? "unknown"}`
     : `last status ${lastStatus}: ${lastBody?.slice(0, 300) ?? ""}`;
   console.error(`[${label}] FAILED after ${MAX} attempts — url=${url}, auth=${hasAuth}, connKey=${hasConnKey}, ${reason}`);
+  recordFailure(reason);
   throw new Error(`${label} ${reason}`);
 }
 
