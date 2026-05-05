@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Link2, Loader2, CheckCircle2, AlertCircle, Folder } from "lucide-react";
-import { ingestFromDriveLink, type IngestResult } from "@/server/cv-ingest.functions";
+import { ingestFromDriveLink, checkDriveHealth, type IngestResult } from "@/server/cv-ingest.functions";
 import { REGIONS, regionLabel } from "@/lib/regions";
 import { toast } from "sonner";
 
