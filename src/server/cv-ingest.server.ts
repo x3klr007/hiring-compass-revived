@@ -199,7 +199,30 @@ export type RetryPolicy = {
   // Extra attempts ONLY for connection-level errors (refused / DNS / reset / delayed connect)
   connectionErrorBonusAttempts: number;
   connectionErrorBaseDelayMs: number;
+  // Optional override for transient HTTP statuses (defaults to module-level set)
+  transientStatuses?: number[];
 };
+
+export function getDefaultTransientStatuses(): number[] {
+  return Array.from(TRANSIENT_STATUSES).sort((a, b) => a - b);
+}
+
+export function getRetryPolicySnapshot() {
+  return {
+    policy: { ...DEFAULT_RETRY_POLICY },
+    transientStatuses: getDefaultTransientStatuses(),
+    envVars: {
+      DRIVE_RETRY_MAX_ATTEMPTS: process.env.DRIVE_RETRY_MAX_ATTEMPTS ?? null,
+      DRIVE_RETRY_BASE_DELAY_MS: process.env.DRIVE_RETRY_BASE_DELAY_MS ?? null,
+      DRIVE_RETRY_MAX_DELAY_MS: process.env.DRIVE_RETRY_MAX_DELAY_MS ?? null,
+      DRIVE_RETRY_FACTOR: process.env.DRIVE_RETRY_FACTOR ?? null,
+      DRIVE_RETRY_JITTER: process.env.DRIVE_RETRY_JITTER ?? null,
+      DRIVE_RETRY_CONN_BONUS: process.env.DRIVE_RETRY_CONN_BONUS ?? null,
+      DRIVE_RETRY_CONN_BASE_DELAY_MS: process.env.DRIVE_RETRY_CONN_BASE_DELAY_MS ?? null,
+      DRIVE_RETRY_TRANSIENT_STATUSES: process.env.DRIVE_RETRY_TRANSIENT_STATUSES ?? null,
+    },
+  };
+}
 
 function envInt(name: string, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER): number {
   const raw = process.env[name];
