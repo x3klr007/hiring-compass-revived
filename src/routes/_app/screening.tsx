@@ -315,7 +315,9 @@ function ScreeningPage() {
           {running ? (
             <>
               <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              {lang === "ar" ? "جاري الاستيراد والفرز..." : "Importing & screening..."}
+              {lang === "ar"
+                ? `جاري الاستيراد والفرز...${attempt > 1 ? ` (محاولة ${attempt})` : ""}`
+                : `Importing & screening...${attempt > 1 ? ` (attempt ${attempt})` : ""}`}
             </>
           ) : (
             <>
