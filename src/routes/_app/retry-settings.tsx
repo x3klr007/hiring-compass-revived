@@ -25,6 +25,7 @@ type Snapshot = {
   policy: Policy;
   transientStatuses: number[];
   envVars: Record<string, string | null>;
+  issues: { name: string; raw: string; reason: string }[];
 };
 
 const FIELDS: Array<{
