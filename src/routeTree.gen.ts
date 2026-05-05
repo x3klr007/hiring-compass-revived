@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppScreeningRouteImport } from './routes/_app/screening'
 import { Route as AppJobsRouteImport } from './routes/_app/jobs'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppScreeningRoute = AppScreeningRouteImport.update({
+  id: '/screening',
+  path: '/screening',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppJobsRoute = AppJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -45,12 +51,14 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof AppDashboardRoute
   '/jobs': typeof AppJobsRoute
+  '/screening': typeof AppScreeningRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AppDashboardRoute
   '/jobs': typeof AppJobsRoute
+  '/screening': typeof AppScreeningRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,13 +67,21 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/jobs': typeof AppJobsRoute
+  '/_app/screening': typeof AppScreeningRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/jobs'
+  fullPaths: '/' | '/auth' | '/dashboard' | '/jobs' | '/screening'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/jobs'
-  id: '__root__' | '/' | '/_app' | '/auth' | '/_app/dashboard' | '/_app/jobs'
+  to: '/' | '/auth' | '/dashboard' | '/jobs' | '/screening'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/auth'
+    | '/_app/dashboard'
+    | '/_app/jobs'
+    | '/_app/screening'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -97,6 +113,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/screening': {
+      id: '/_app/screening'
+      path: '/screening'
+      fullPath: '/screening'
+      preLoaderRoute: typeof AppScreeningRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/jobs': {
       id: '/_app/jobs'
       path: '/jobs'
@@ -117,11 +140,13 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppJobsRoute: typeof AppJobsRoute
+  AppScreeningRoute: typeof AppScreeningRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppJobsRoute: AppJobsRoute,
+  AppScreeningRoute: AppScreeningRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -134,3 +159,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
