@@ -5,6 +5,86 @@ import mammoth from "mammoth";
 const DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+// ---------- Circuit Breaker ----------
+type BreakerState = "CLOSED" | "OPEN" | "HALF_OPEN";
+const BREAKER = {
+  state: "CLOSED" as BreakerState,
+  failures: 0,
+  openedAt: 0,
+  lastError: "" as string,
+  // tunables
+  FAILURE_THRESHOLD: 3,
+  COOLDOWN_MS: 30_000,
+};
+
+function breakerSnapshot() {
+  const now = Date.now();
+  const cooldownRemainingMs =
+    BREAKER.state === "OPEN"
+      ? Math.max(0, BREAKER.COOLDOWN_MS - (now - BREAKER.openedAt))
+      : 0;
+  return {
+    state: BREAKER.state,
+    failures: BREAKER.failures,
+    cooldownRemainingMs,
+    lastError: BREAKER.lastError || undefined,
+  };
+}
+
+function shouldShortCircuit(): boolean {
+  if (BREAKER.state !== "OPEN") return false;
+  if (Date.now() - BREAKER.openedAt >= BREAKER.COOLDOWN_MS) {
+    BREAKER.state = "HALF_OPEN";
+    console.log("[breaker] cooldown elapsed → HALF_OPEN (probing)");
+    return false;
+  }
+  return true;
+}
+
+function isTransientStatus(status: number) {
+  return status === 502 || status === 503 || status === 504;
+}
+
+function recordSuccess() {
+  if (BREAKER.state !== "CLOSED") {
+    console.log(`[breaker] ${BREAKER.state} → CLOSED (probe ok)`);
+  }
+  BREAKER.state = "CLOSED";
+  BREAKER.failures = 0;
+  BREAKER.lastError = "";
+}
+
+function recordFailure(reason: string) {
+  BREAKER.lastError = reason.slice(0, 300);
+  if (BREAKER.state === "HALF_OPEN") {
+    BREAKER.state = "OPEN";
+    BREAKER.openedAt = Date.now();
+    console.warn(`[breaker] HALF_OPEN probe failed → OPEN for ${BREAKER.COOLDOWN_MS}ms`);
+    return;
+  }
+  BREAKER.failures += 1;
+  if (BREAKER.failures >= BREAKER.FAILURE_THRESHOLD) {
+    BREAKER.state = "OPEN";
+    BREAKER.openedAt = Date.now();
+    console.warn(
+      `[breaker] threshold ${BREAKER.failures}/${BREAKER.FAILURE_THRESHOLD} reached → OPEN for ${BREAKER.COOLDOWN_MS}ms`
+    );
+  }
+}
+
+class CircuitOpenError extends Error {
+  cooldownRemainingMs: number;
+  constructor(cooldownRemainingMs: number, lastError?: string) {
+    super(
+      `CIRCUIT_OPEN: Drive gateway temporarily disabled (retry in ${Math.ceil(
+        cooldownRemainingMs / 1000
+      )}s)${lastError ? ` — last error: ${lastError}` : ""}`
+    );
+    this.name = "CircuitOpenError";
+    this.cooldownRemainingMs = cooldownRemainingMs;
+  }
+}
+
 function driveHeaders() {
   const lov = process.env.LOVABLE_API_KEY;
   const gd = process.env.GOOGLE_DRIVE_API_KEY;
