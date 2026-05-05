@@ -541,7 +541,6 @@ function JobDetailsDialog({
             <DialogHeader>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-xs text-muted-foreground">{job.job_code}</span>
-                <Badge variant={job.priority === "High" ? "destructive" : "outline"}>{job.priority}</Badge>
                 <Badge variant={job.status === "Open" ? "default" : "secondary"}>{job.status}</Badge>
                 <Badge variant="outline">{classification}</Badge>
               </div>
