@@ -172,6 +172,16 @@ function JobsPage() {
               <Badge variant="secondary" className="ms-1">{activeFilters}</Badge>
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={!filteredJobs.length}
+            onClick={() => exportJobsToXlsx(filteredJobs)}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {t("exportExcel")}
+          </Button>
         </div>
 
         <div className="flex flex-wrap gap-4">
