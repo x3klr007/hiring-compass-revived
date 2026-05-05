@@ -17,7 +17,7 @@ type Job = { id: string; title: string; region: string };
 
 function ScreeningPage() {
   const { t, lang, dir } = useI18n();
-  const ingest = useServerFn(ingestFromDriveLink);
+  const ingest = useAuthedServerFn(ingestFromDriveLink);
   const [link, setLink] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [defaultJobId, setDefaultJobId] = useState<string>("");
