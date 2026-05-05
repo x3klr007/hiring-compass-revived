@@ -41,9 +41,41 @@ function ScreeningPage() {
       .then(({ data }) => setJobs((data ?? []) as Job[]));
   }, []);
 
+  const runHealthCheck = async () => {
+    setHealthChecking(true);
+    try {
+      const res = await healthCheck({});
+      setDriveHealth({ ...res, checkedAt: Date.now() });
+      return res;
+    } catch (err) {
+      const r = { ok: false, latencyMs: 0, error: (err as Error).message, checkedAt: Date.now() };
+      setDriveHealth(r);
+      return r;
+    } finally {
+      setHealthChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    runHealthCheck();
+    const id = setInterval(runHealthCheck, 60_000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onRun = async () => {
     if (!link.trim()) {
       toast.error(lang === "ar" ? "أدخل رابط Google Drive" : "Paste a Google Drive link");
+      return;
+    }
+    // Preflight health check
+    const health = await runHealthCheck();
+    if (!health.ok) {
+      toast.error(
+        lang === "ar"
+          ? "خدمة Google Drive غير متوفرة حالياً. حاول مرة أخرى بعد قليل."
+          : "Google Drive service is currently unavailable. Please try again shortly."
+      );
       return;
     }
     setRunning(true);
