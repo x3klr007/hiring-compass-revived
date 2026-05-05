@@ -172,6 +172,7 @@ const translations = {
     clearFilters: "مسح",
     noMatches: "لا توجد وظائف مطابقة للتصفية",
     showing: "عرض",
+    exportExcel: "تصدير Excel",
     of: "من",
     accessDenied: "الوصول مرفوض",
     adminsOnly: "هذه المنطقة مخصصة للمسؤولين فقط.",
