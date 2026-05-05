@@ -23,9 +23,10 @@ function ScreeningPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [defaultJobId, setDefaultJobId] = useState<string>("");
   const [defaultRegion, setDefaultRegion] = useState<string>("");
+  const [genderFilter, setGenderFilter] = useState<"any" | "male" | "female">("any");
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<IngestResult[]>([]);
-  const [summary, setSummary] = useState<{ total: number; skipped: number } | null>(null);
+  const [summary, setSummary] = useState<{ total: number; skipped: number; filteredByGender?: number } | null>(null);
   const [authError, setAuthError] = useState(false);
   type Breaker = { state: "CLOSED" | "OPEN" | "HALF_OPEN"; failures: number; cooldownRemainingMs: number; lastError?: string };
   const [driveHealth, setDriveHealth] = useState<
