@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar as CalIcon, Video, Loader2, ExternalLink } from "lucide-react";
 import { REGIONS, regionLabel } from "@/lib/regions";
 import { scheduleInterview } from "@/server/calendar.functions";
+import { sendInterviewInvite } from "@/server/gmail.functions";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 type Cand = { id: string; full_name: string; email: string };
