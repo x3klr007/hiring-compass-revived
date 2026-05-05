@@ -8,9 +8,13 @@ import { Kanban } from "lucide-react";
 import { REGIONS, regionLabel } from "@/lib/regions";
 import { toast } from "sonner";
 
+import { CandidateActionDialog } from "@/components/CandidateActionDialog";
+
 type Candidate = {
   id: string;
   full_name: string;
+  email: string;
+  phone: string | null;
   stage: string;
   score: number;
   gender: string | null;
@@ -27,20 +31,24 @@ function PipelinePage() {
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [region, setRegion] = useState<string>("");
   const [dragId, setDragId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Candidate | null>(null);
+  const [dialogTab, setDialogTab] = useState<"evaluate" | "message">("evaluate");
+
+  const reload = async () => {
+    const [{ data: s }, { data: c }, { data: j }] = await Promise.all([
+      supabase.from("pipeline_stages").select("*").order("display_order"),
+      supabase.from("candidates").select("id,full_name,email,phone,stage,score,gender,job_id"),
+      supabase.from("jobs").select("id,region"),
+    ]);
+    setStages((s ?? []) as Stage[]);
+    setCandidates((c ?? []) as Candidate[]);
+    const map: Record<string, Job> = {};
+    (j ?? []).forEach((x) => (map[x.id] = x as Job));
+    setJobs(map);
+  };
 
   useEffect(() => {
-    (async () => {
-      const [{ data: s }, { data: c }, { data: j }] = await Promise.all([
-        supabase.from("pipeline_stages").select("*").order("display_order"),
-        supabase.from("candidates").select("id,full_name,stage,score,gender,job_id"),
-        supabase.from("jobs").select("id,region"),
-      ]);
-      setStages((s ?? []) as Stage[]);
-      setCandidates((c ?? []) as Candidate[]);
-      const map: Record<string, Job> = {};
-      (j ?? []).forEach((x) => (map[x.id] = x as Job));
-      setJobs(map);
-    })();
+    void reload();
   }, []);
 
   const visible = useMemo(() => {
@@ -115,7 +123,8 @@ function PipelinePage() {
                     key={c.id}
                     draggable
                     onDragStart={() => setDragId(c.id)}
-                    className="rounded-lg border bg-card/70 p-2.5 text-sm cursor-grab active:cursor-grabbing hover:shadow-md transition"
+                    onClick={() => { setSelected(c); setDialogTab(s.name === "Interview" ? "evaluate" : "message"); }}
+                    className="rounded-lg border bg-card/70 p-2.5 text-sm cursor-pointer hover:shadow-md transition"
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-medium truncate">{c.full_name}</div>
@@ -135,6 +144,14 @@ function PipelinePage() {
           );
         })}
       </div>
+
+      <CandidateActionDialog
+        candidate={selected}
+        open={!!selected}
+        onOpenChange={(v) => !v && setSelected(null)}
+        defaultTab={dialogTab}
+        onChanged={reload}
+      />
     </div>
   );
 }

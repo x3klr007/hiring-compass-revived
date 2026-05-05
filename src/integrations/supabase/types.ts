@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -370,6 +388,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      message_log: {
+        Row: {
+          body: string | null
+          candidate_id: string | null
+          cc: string | null
+          channel: string
+          created_at: string
+          error: string | null
+          id: string
+          provider_message_id: string | null
+          recipient: string
+          sent_by: string | null
+          status: string
+          subject: string | null
+          template_key: string | null
+        }
+        Insert: {
+          body?: string | null
+          candidate_id?: string | null
+          cc?: string | null
+          channel?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient: string
+          sent_by?: string | null
+          status?: string
+          subject?: string | null
+          template_key?: string | null
+        }
+        Update: {
+          body?: string | null
+          candidate_id?: string | null
+          cc?: string | null
+          channel?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient?: string
+          sent_by?: string | null
+          status?: string
+          subject?: string | null
+          template_key?: string | null
+        }
+        Relationships: []
       }
       message_templates: {
         Row: {
