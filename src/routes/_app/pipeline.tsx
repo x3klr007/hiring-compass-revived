@@ -144,6 +144,14 @@ function PipelinePage() {
           );
         })}
       </div>
+
+      <CandidateActionDialog
+        candidate={selected}
+        open={!!selected}
+        onOpenChange={(v) => !v && setSelected(null)}
+        defaultTab={dialogTab}
+        onChanged={reload}
+      />
     </div>
   );
 }
