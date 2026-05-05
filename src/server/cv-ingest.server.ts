@@ -163,7 +163,7 @@ async function fetchWithRetry(url: string, init: RequestInit, label: string): Pr
   }
   // In HALF_OPEN we only allow a single probe attempt
   const isProbe = BREAKER.state === "HALF_OPEN";
-  const MAX = 4;
+  const MAX = isProbe ? 1 : 4;
   let lastErr: unknown;
   let lastStatus: number | undefined;
   let lastBody: string | undefined;
@@ -173,17 +173,23 @@ async function fetchWithRetry(url: string, init: RequestInit, label: string): Pr
   for (let attempt = 1; attempt <= MAX; attempt++) {
     const t0 = Date.now();
     try {
-      console.log(`[${label}] attempt ${attempt}/${MAX} → ${url} (auth=${hasAuth}, connKey=${hasConnKey})`);
+      console.log(`[${label}] attempt ${attempt}/${MAX} → ${url} (auth=${hasAuth}, connKey=${hasConnKey}, probe=${isProbe})`);
       const res = await fetch(url, init);
       const dur = Date.now() - t0;
       lastStatus = res.status;
-      if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt < MAX) {
+      if (isTransientStatus(res.status) && attempt < MAX) {
         lastBody = await res.clone().text().catch(() => "<unreadable>");
         console.warn(`[${label}] attempt ${attempt} transient ${res.status} in ${dur}ms — body: ${lastBody?.slice(0, 300)}`);
         await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
         continue;
       }
       console.log(`[${label}] attempt ${attempt} done status=${res.status} in ${dur}ms`);
+      // Feed breaker
+      if (isTransientStatus(res.status)) {
+        recordFailure(`HTTP ${res.status}`);
+      } else {
+        recordSuccess();
+      }
       return res;
     } catch (err) {
       const dur = Date.now() - t0;
