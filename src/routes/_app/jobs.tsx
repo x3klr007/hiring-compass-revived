@@ -160,6 +160,9 @@ function JobsPage() {
         case "branch": return branchRank(j.branch);
         case "remaining": return Math.max(0, j.headcount - j.hired_count);
         case "hired": return j.hired_count;
+        case "code": return j.job_code;
+        case "title": return j.title.toLowerCase();
+        case "status": return j.status;
         default: return 0;
       }
     };
