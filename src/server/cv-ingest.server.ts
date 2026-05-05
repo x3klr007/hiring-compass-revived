@@ -289,6 +289,9 @@ async function fetchWithRetry(
   const hasAuth = headerKeys.includes("Authorization");
   const hasConnKey = headerKeys.includes("X-Connection-Api-Key");
 
+  const transientCheck = (status: number) =>
+    policy.transientStatuses ? policy.transientStatuses.includes(status) : isTransientStatus(status);
+
   let attempt = 0;
   while (true) {
     attempt += 1;
@@ -301,7 +304,7 @@ async function fetchWithRetry(
       const res = await fetch(url, init);
       const dur = Date.now() - t0;
       lastStatus = res.status;
-      if (isTransientStatus(res.status)) {
+      if (transientCheck(res.status)) {
         lastBody = await res.clone().text().catch(() => "<unreadable>");
         if (attempt < baseMax) {
           const delay = backoffDelay(attempt, policy.baseDelayMs, policy.factor, policy.maxDelayMs, policy.jitter);
