@@ -303,37 +303,40 @@ async function fetchWithRetry(
 }
 
 export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
+  const reqId = newReqId("list");
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
   const url = `${DRIVE_GATEWAY}/files?q=${q}&fields=files(id,name,mimeType,size)&pageSize=200`;
   const start = Date.now();
-  console.log(`[listDriveFolder] folderId=${folderId} url=${url}`);
+  console.log(`[listDriveFolder][${reqId}] folderId=${folderId} url=${url}`);
   let res: Response;
   try {
-    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list");
+    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list", DEFAULT_RETRY_POLICY, reqId);
   } catch (err) {
-    console.error(`[listDriveFolder] giving up after ${Date.now() - start}ms — folderId=${folderId}`, err);
+    console.error(`[listDriveFolder][${reqId}] giving up after ${Date.now() - start}ms — folderId=${folderId}`, err);
     throw err;
   }
   if (!res.ok) {
     const body = await res.text();
-    console.error(`[listDriveFolder] non-OK status=${res.status} folderId=${folderId} totalMs=${Date.now() - start} body=${body.slice(0, 500)}`);
+    console.error(`[listDriveFolder][${reqId}] non-OK status=${res.status} folderId=${folderId} totalMs=${Date.now() - start} body=${body.slice(0, 500)}`);
     throw new Error(`Drive list failed [${res.status}]: ${body}`);
   }
   const json = (await res.json()) as { files?: DriveFile[] };
-  console.log(`[listDriveFolder] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
+  console.log(`[listDriveFolder][${reqId}] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
   return json.files ?? [];
 }
 
 export async function getDriveFileMeta(fileId: string): Promise<DriveFile> {
+  const reqId = newReqId("meta");
   const url = `${DRIVE_GATEWAY}/files/${fileId}?fields=id,name,mimeType,size`;
-  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive meta");
+  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive meta", DEFAULT_RETRY_POLICY, reqId);
   if (!res.ok) throw new Error(`Drive meta failed [${res.status}]: ${await res.text()}`);
   return (await res.json()) as DriveFile;
 }
 
 export async function downloadDriveFile(fileId: string): Promise<ArrayBuffer> {
+  const reqId = newReqId("dl");
   const url = `${DRIVE_GATEWAY}/files/${fileId}?alt=media`;
-  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive download");
+  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive download", DEFAULT_RETRY_POLICY, reqId);
   if (!res.ok) throw new Error(`Drive download failed [${res.status}]: ${await res.text()}`);
   return await res.arrayBuffer();
 }
