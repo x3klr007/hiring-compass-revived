@@ -16,6 +16,7 @@ const translations = {
     templates: "Templates",
     auditLog: "Audit Log",
     driveFailures: "Drive Failures",
+    retrySettings: "Retry Policy",
     settings: "Settings",
     signOut: "Sign Out",
     signIn: "Sign In",
