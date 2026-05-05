@@ -17,6 +17,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppScreeningRouteImport } from './routes/_app/screening'
 import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppJobsRouteImport } from './routes/_app/jobs'
+import { Route as AppDriveFailuresRouteImport } from './routes/_app/drive-failures'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCandidatesRouteImport } from './routes/_app/candidates'
 import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
@@ -62,6 +63,11 @@ const AppJobsRoute = AppJobsRouteImport.update({
   path: '/jobs',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDriveFailuresRoute = AppDriveFailuresRouteImport.update({
+  id: '/drive-failures',
+  path: '/drive-failures',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof AppCalendarRoute
   '/candidates': typeof AppCandidatesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/drive-failures': typeof AppDriveFailuresRoute
   '/jobs': typeof AppJobsRoute
   '/pipeline': typeof AppPipelineRoute
   '/screening': typeof AppScreeningRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/calendar': typeof AppCalendarRoute
   '/candidates': typeof AppCandidatesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/drive-failures': typeof AppDriveFailuresRoute
   '/jobs': typeof AppJobsRoute
   '/pipeline': typeof AppPipelineRoute
   '/screening': typeof AppScreeningRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/candidates': typeof AppCandidatesRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/drive-failures': typeof AppDriveFailuresRoute
   '/_app/jobs': typeof AppJobsRoute
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/screening': typeof AppScreeningRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/candidates'
     | '/dashboard'
+    | '/drive-failures'
     | '/jobs'
     | '/pipeline'
     | '/screening'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/candidates'
     | '/dashboard'
+    | '/drive-failures'
     | '/jobs'
     | '/pipeline'
     | '/screening'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/_app/calendar'
     | '/_app/candidates'
     | '/_app/dashboard'
+    | '/_app/drive-failures'
     | '/_app/jobs'
     | '/_app/pipeline'
     | '/_app/screening'
@@ -242,6 +254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppJobsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/drive-failures': {
+      id: '/_app/drive-failures'
+      path: '/drive-failures'
+      fullPath: '/drive-failures'
+      preLoaderRoute: typeof AppDriveFailuresRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -286,6 +305,7 @@ interface AppRouteChildren {
   AppCalendarRoute: typeof AppCalendarRoute
   AppCandidatesRoute: typeof AppCandidatesRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDriveFailuresRoute: typeof AppDriveFailuresRoute
   AppJobsRoute: typeof AppJobsRoute
   AppPipelineRoute: typeof AppPipelineRoute
   AppScreeningRoute: typeof AppScreeningRoute
@@ -299,6 +319,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCalendarRoute: AppCalendarRoute,
   AppCandidatesRoute: AppCandidatesRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppDriveFailuresRoute: AppDriveFailuresRoute,
   AppJobsRoute: AppJobsRoute,
   AppPipelineRoute: AppPipelineRoute,
   AppScreeningRoute: AppScreeningRoute,
