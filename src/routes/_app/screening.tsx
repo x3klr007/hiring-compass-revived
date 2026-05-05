@@ -253,7 +253,21 @@ function ScreeningPage() {
                 <div className="text-xs text-muted-foreground mt-0.5">
                   {driveHealth.status ? `HTTP ${driveHealth.status} — ` : ""}
                   {driveHealth.error}
-                </div>
+                {driveHealth.breaker && driveHealth.breaker.state !== "CLOSED" && (
+                  <div className="text-xs mt-1">
+                    <Badge variant="outline" className="me-2">
+                      {driveHealth.breaker.state}
+                    </Badge>
+                    {driveHealth.breaker.state === "OPEN"
+                      ? lang === "ar"
+                        ? `إعادة المحاولة تلقائياً خلال ${Math.ceil(driveHealth.breaker.cooldownRemainingMs / 1000)} ثانية`
+                        : `Auto-retry in ${Math.ceil(driveHealth.breaker.cooldownRemainingMs / 1000)}s`
+                      : lang === "ar"
+                        ? "جارٍ اختبار التعافي..."
+                        : "Probing recovery..."}
+                  </div>
+                )}
+              </div>
               </div>
             )}
           </div>
