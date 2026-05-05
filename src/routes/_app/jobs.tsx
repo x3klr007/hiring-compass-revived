@@ -213,6 +213,32 @@ function JobsPage() {
               <Badge variant="secondary" className="ms-1">{activeFilters}</Badge>
             </Button>
           )}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">{t("sortBy")}:</span>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-9 w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">{t("default")}</SelectItem>
+                <SelectItem value="priority">{t("priority")}</SelectItem>
+                <SelectItem value="region">{t("region")}</SelectItem>
+                <SelectItem value="branch">{t("branch")}</SelectItem>
+                <SelectItem value="remaining">{t("remainingVacancies")}</SelectItem>
+                <SelectItem value="hired">{t("hired")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              disabled={sortBy === "default"}
+              onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+              aria-label="Toggle sort direction"
+            >
+              {sortDir === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+            </Button>
+          </div>
           <Button
             variant="outline"
             size="sm"
