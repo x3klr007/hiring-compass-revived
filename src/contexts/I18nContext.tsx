@@ -4,8 +4,8 @@ type Lang = "en" | "ar";
 
 const translations = {
   en: {
-    appName: "Nasheen Recruitment",
-    appTagline: "Hiring Compass",
+    appName: "مشروع مدارس طويق",
+    appTagline: "بوصلة التوظيف",
     dashboard: "Dashboard",
     pipeline: "Pipeline",
     calendar: "Calendar",
@@ -84,7 +84,7 @@ const translations = {
     adminsOnly: "This area is restricted to administrators.",
   },
   ar: {
-    appName: "ناشين للتوظيف",
+    appName: "مشروع مدارس طويق",
     appTagline: "بوصلة التوظيف",
     dashboard: "لوحة التحكم",
     pipeline: "خط التوظيف",
