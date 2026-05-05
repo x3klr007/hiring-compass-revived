@@ -129,6 +129,17 @@ function ScreeningPage() {
           setAttempt(0);
           return;
         }
+        // Stop retrying if circuit is open — pointless to keep hammering
+        if (/CIRCUIT_OPEN/i.test(lastMsg)) {
+          toast.error(
+            lang === "ar"
+              ? "تم إيقاف المحاولات مؤقتاً (Circuit Breaker). انتظر قليلاً ثم أعد المحاولة."
+              : "Retries stopped (Circuit Breaker open). Please wait a moment and try again."
+          );
+          // Refresh health to surface cooldown
+          runHealthCheck();
+          break;
+        }
         if (i < MAX && isTransient(lastMsg)) {
           const delay = 800 * 2 ** (i - 1);
           toast.message(
