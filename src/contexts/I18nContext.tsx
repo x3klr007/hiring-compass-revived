@@ -15,6 +15,7 @@ const translations = {
     aiScreening: "AI Screening",
     templates: "Templates",
     auditLog: "Audit Log",
+    driveFailures: "Drive Failures",
     settings: "Settings",
     signOut: "Sign Out",
     signIn: "Sign In",
