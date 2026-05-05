@@ -71,6 +71,23 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
         }
         const ex = await extractCandidateFromText(text, openJobs);
 
+        // Reject duplicates by email (case-insensitive)
+        if (ex.email) {
+          const { data: existing } = await supabase
+            .from("candidates")
+            .select("id, full_name, email")
+            .ilike("email", ex.email)
+            .maybeSingle();
+          if (existing) {
+            results.push({
+              source_name: f.name,
+              ok: false,
+              error: `DUPLICATE: ${existing.full_name} <${existing.email}>`,
+            });
+            continue;
+          }
+        }
+
         // match suggested position to open job title (for default region)
         let job_id: string | null = data.defaultJobId ?? null;
         let region = data.defaultRegion ?? null;
