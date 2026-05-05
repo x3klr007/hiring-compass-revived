@@ -113,6 +113,7 @@ const translations = {
     aiScreening: "الفرز الذكي",
     templates: "القوالب",
     auditLog: "سجل التدقيق",
+    driveFailures: "أعطال Drive",
     settings: "الإعدادات",
     signOut: "تسجيل الخروج",
     signIn: "تسجيل الدخول",
