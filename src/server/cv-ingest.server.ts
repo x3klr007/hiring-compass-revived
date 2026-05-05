@@ -32,31 +32,62 @@ export type DriveFile = { id: string; name: string; mimeType: string; size?: str
 async function fetchWithRetry(url: string, init: RequestInit, label: string): Promise<Response> {
   const MAX = 4;
   let lastErr: unknown;
+  let lastStatus: number | undefined;
+  let lastBody: string | undefined;
+  const headerKeys = Object.keys((init.headers ?? {}) as Record<string, string>);
+  const hasAuth = headerKeys.includes("Authorization");
+  const hasConnKey = headerKeys.includes("X-Connection-Api-Key");
   for (let attempt = 1; attempt <= MAX; attempt++) {
+    const t0 = Date.now();
     try {
+      console.log(`[${label}] attempt ${attempt}/${MAX} → ${url} (auth=${hasAuth}, connKey=${hasConnKey})`);
       const res = await fetch(url, init);
+      const dur = Date.now() - t0;
+      lastStatus = res.status;
       if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt < MAX) {
+        lastBody = await res.clone().text().catch(() => "<unreadable>");
+        console.warn(`[${label}] attempt ${attempt} transient ${res.status} in ${dur}ms — body: ${lastBody?.slice(0, 300)}`);
         await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
         continue;
       }
+      console.log(`[${label}] attempt ${attempt} done status=${res.status} in ${dur}ms`);
       return res;
     } catch (err) {
+      const dur = Date.now() - t0;
       lastErr = err;
+      console.warn(`[${label}] attempt ${attempt} threw in ${dur}ms: ${(err as Error)?.message}`);
       if (attempt < MAX) {
         await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
         continue;
       }
     }
   }
-  throw new Error(`${label} network error: ${(lastErr as Error)?.message ?? "unknown"}`);
+  const reason = lastErr
+    ? `network error: ${(lastErr as Error)?.message ?? "unknown"}`
+    : `last status ${lastStatus}: ${lastBody?.slice(0, 300) ?? ""}`;
+  console.error(`[${label}] FAILED after ${MAX} attempts — url=${url}, auth=${hasAuth}, connKey=${hasConnKey}, ${reason}`);
+  throw new Error(`${label} ${reason}`);
 }
 
 export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
   const url = `${DRIVE_GATEWAY}/files?q=${q}&fields=files(id,name,mimeType,size)&pageSize=200`;
-  const res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list");
-  if (!res.ok) throw new Error(`Drive list failed [${res.status}]: ${await res.text()}`);
+  const start = Date.now();
+  console.log(`[listDriveFolder] folderId=${folderId} url=${url}`);
+  let res: Response;
+  try {
+    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list");
+  } catch (err) {
+    console.error(`[listDriveFolder] giving up after ${Date.now() - start}ms — folderId=${folderId}`, err);
+    throw err;
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`[listDriveFolder] non-OK status=${res.status} folderId=${folderId} totalMs=${Date.now() - start} body=${body.slice(0, 500)}`);
+    throw new Error(`Drive list failed [${res.status}]: ${body}`);
+  }
   const json = (await res.json()) as { files?: DriveFile[] };
+  console.log(`[listDriveFolder] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
   return json.files ?? [];
 }
 
