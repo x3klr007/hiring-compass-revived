@@ -135,7 +135,6 @@ function JobsPage() {
   const sortedJobs = useMemo(() => {
     if (sortBy === "default") return filteredJobs;
     const dir = sortDir === "asc" ? 1 : -1;
-    const priorityRank = (p: string) => (p === "High" ? 0 : 1);
     const regionRank = (r: string) => {
       const i = REGION_ORDER.indexOf(r);
       return i === -1 ? 999 : i;
@@ -146,7 +145,6 @@ function JobsPage() {
     };
     const key = (j: Job): number | string => {
       switch (sortBy) {
-        case "priority": return priorityRank(j.priority);
         case "region": return regionRank(j.region);
         case "branch": return branchRank(j.branch);
         case "remaining": return Math.max(0, j.headcount - j.hired_count);
