@@ -46,15 +46,7 @@ function ScreeningPage() {
     setSummary(null);
     setAuthError(false);
     try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
-      if (!token) {
-        setAuthError(true);
-        setRunning(false);
-        return;
-      }
       const res = await ingest({
-        headers: { Authorization: `Bearer ${token}` },
         data: {
           link: link.trim(),
           defaultJobId: defaultJobId || null,
@@ -63,7 +55,7 @@ function ScreeningPage() {
       });
       setResults(res.results);
       setSummary({ total: res.total, skipped: res.skipped });
-      const ok = res.results.filter((r) => r.ok).length;
+      const ok = res.results.filter((r: IngestResult) => r.ok).length;
       toast.success(
         lang === "ar"
           ? `تمت إضافة ${ok} مرشح من ${res.total}`
