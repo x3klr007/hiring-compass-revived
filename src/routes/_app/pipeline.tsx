@@ -8,9 +8,13 @@ import { Kanban } from "lucide-react";
 import { REGIONS, regionLabel } from "@/lib/regions";
 import { toast } from "sonner";
 
+import { CandidateActionDialog } from "@/components/CandidateActionDialog";
+
 type Candidate = {
   id: string;
   full_name: string;
+  email: string;
+  phone: string | null;
   stage: string;
   score: number;
   gender: string | null;
