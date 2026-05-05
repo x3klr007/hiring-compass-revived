@@ -250,7 +250,7 @@ function ScreeningPage() {
           </div>
         </div>
 
-        <Button onClick={onRun} disabled={running} size="lg" className="w-full md:w-auto">
+        <Button onClick={onRun} disabled={running || (driveHealth ? !driveHealth.ok : false)} size="lg" className="w-full md:w-auto">
           {running ? (
             <>
               <Loader2 className="me-2 h-4 w-4 animate-spin" />
