@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Search, X, Download } from "lucide-react";
 import { exportJobsToXlsx } from "@/lib/exportJobsXlsx";
+import { exportJobsToCsv } from "@/lib/exportJobsCsv";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
 import { Card } from "@/components/ui/card";
@@ -298,16 +300,22 @@ function JobsPage() {
               {sortDir === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
             </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            disabled={!filteredJobs.length}
-            onClick={() => exportJobsToXlsx(filteredJobs)}
-          >
-            <Download className="h-3.5 w-3.5" />
-            {t("exportExcel")}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={!filteredJobs.length}>
+                <Download className="h-3.5 w-3.5" />
+                {ar ? "تصدير" : "Export"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportJobsToXlsx(filteredJobs)}>
+                {ar ? "Excel (.xlsx)" : "Excel (.xlsx)"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportJobsToCsv(filteredJobs)}>
+                {ar ? "CSV (.csv)" : "CSV (.csv)"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex flex-wrap gap-4">
