@@ -430,6 +430,74 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
   return json.files ?? [];
 }
 
+export async function testRetryPolicy(input: {
+  policy: RetryPolicy;
+  folderId?: string;
+}): Promise<{
+  ok: boolean;
+  reqId: string;
+  attempts: number;
+  totalMs: number;
+  status?: number;
+  error?: string;
+  logs: string[];
+  policyUsed: RetryPolicy;
+}> {
+  const reqId = newReqId("test");
+  const start = Date.now();
+  const logs: string[] = [];
+  // Capture console output during this call
+  const origLog = console.log;
+  const origWarn = console.warn;
+  const origErr = console.error;
+  const cap = (lvl: string) => (...args: unknown[]) => {
+    const msg = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+    if (msg.includes(reqId)) logs.push(`[${lvl}] ${msg}`);
+  };
+  console.log = (...a) => { cap("log")(...a); origLog(...a); };
+  console.warn = (...a) => { cap("warn")(...a); origWarn(...a); };
+  console.error = (...a) => { cap("error")(...a); origErr(...a); };
+
+  let attempts = 0;
+  // Wrap fetch to count attempts
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = ((url: any, init: any) => {
+    attempts += 1;
+    return origFetch(url, init);
+  }) as typeof fetch;
+
+  const folderId = input.folderId?.trim() || "root";
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+  const url = `${DRIVE_GATEWAY}/files?q=${q}&pageSize=1&fields=files(id)`;
+  try {
+    const res = await fetchWithRetry(url, { headers: driveHeaders() }, "RetryTest", input.policy, reqId);
+    return {
+      ok: res.ok,
+      reqId,
+      attempts,
+      totalMs: Date.now() - start,
+      status: res.status,
+      logs,
+      policyUsed: input.policy,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      reqId,
+      attempts,
+      totalMs: Date.now() - start,
+      error: (err as Error).message,
+      logs,
+      policyUsed: input.policy,
+    };
+  } finally {
+    globalThis.fetch = origFetch;
+    console.log = origLog;
+    console.warn = origWarn;
+    console.error = origErr;
+  }
+}
+
 export async function getDriveFileMeta(fileId: string): Promise<DriveFile> {
   const reqId = newReqId("meta");
   const url = `${DRIVE_GATEWAY}/files/${fileId}?fields=id,name,mimeType,size`;
