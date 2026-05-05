@@ -85,6 +85,36 @@ function JobsPage() {
     });
   }, [allJobs, statuses, priorities, debouncedSearch]);
 
+  const sortedJobs = useMemo(() => {
+    if (sortBy === "default") return filteredJobs;
+    const dir = sortDir === "asc" ? 1 : -1;
+    const priorityRank = (p: string) => (p === "High" ? 0 : 1);
+    const regionRank = (r: string) => {
+      const i = REGION_ORDER.indexOf(r);
+      return i === -1 ? 999 : i;
+    };
+    const branchRank = (b: string) => {
+      const i = BRANCH_ORDER.indexOf(b);
+      return i === -1 ? 999 : i;
+    };
+    const key = (j: Job): number | string => {
+      switch (sortBy) {
+        case "priority": return priorityRank(j.priority);
+        case "region": return regionRank(j.region);
+        case "branch": return branchRank(j.branch);
+        case "remaining": return Math.max(0, j.headcount - j.hired_count);
+        case "hired": return j.hired_count;
+        default: return 0;
+      }
+    };
+    return [...filteredJobs].sort((a, b) => {
+      const ka = key(a), kb = key(b);
+      if (ka < kb) return -1 * dir;
+      if (ka > kb) return 1 * dir;
+      return a.title.localeCompare(b.title);
+    });
+  }, [filteredJobs, sortBy, sortDir]);
+
   const grouped = useMemo(() => {
     const byRegion = new Map<string, Map<string, Job[]>>();
     for (const j of filteredJobs) {
