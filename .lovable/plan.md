@@ -1,30 +1,39 @@
-# Jobs Page — Search & Filtering
+# Export Jobs to Excel — Workbook-Faithful
 
-Add a filter toolbar to `/jobs` so users can quickly narrow down the 45 vacancies without losing the existing region/branch grouping.
+Add an "Export to Excel" button on `/jobs` that downloads the currently filtered list as an `.xlsx` file matching the original "Available Jobs" sheet from the source workbook.
 
 ## What you'll see
 
-A compact toolbar above the region tabs with:
+- A new **Export Excel** button next to the filter toolbar (icon: download).
+- Clicking it downloads `Available_Jobs_YYYY-MM-DD.xlsx` with one sheet named **Available Jobs** that mirrors the source layout:
 
-- **Search box** — matches `title` (English/Arabic substring) and `job_code` (e.g. "JOB-047"). Debounced, case-insensitive.
-- **Status filter** — multi-select chips: `Open`, `Filled`, `On Hold`.
-- **Priority filter** — chips: `High`, `Normal`.
-- **Clear filters** button — appears when any filter is active; shows a count badge ("3 of 45").
+  ```text
+  Row 1: "Available Jobs — Youth Sector"   (merged A1:I1, dark-blue banner, white bold)
+  Row 2: # | Region | Branch | Stage | Job Title | Work Type | Count | Status | Branch Classification   (blue header)
+  Row 3: Totals row (counts of regions / branches / titles / sum vacant)   (navy)
+  Row 4+: One row per job, sorted by region → branch → title
+  ```
 
-The region tabs and per-branch tables remain. Tab counts and the summary stats (Total / Open / Regions / Branches) update live to reflect only the filtered set. Empty regions/branches are hidden when filters exclude them. If nothing matches, a friendly empty state replaces the tables.
-
-Fully bilingual (EN/AR) with RTL-aware spacing.
+- Row tinting matches the workbook palette:
+  - **Headquarters** rows → light gold
+  - **Boys School** rows → light blue (`#ADD8E6`)
+  - **Girls School** rows → light pink (`#FFB6C1`)
+- Column widths, frozen header (rows 1–3), and AutoFilter on the header row are preserved.
+- Export respects the **active filters** (search / status / priority), so users can export a subset. Totals row recalculates from the exported set.
 
 ## Technical notes
 
-- Edit only `src/routes/_app/jobs.tsx` — pure client-side filtering on the already-fetched `jobs` query (no DB or RLS changes; dataset is small).
-- New local state: `search: string`, `statuses: Set<string>`, `priorities: Set<string>`. Wrap in `useMemo` that returns `filteredJobs`, then feed `filteredJobs` into the existing `grouped` / `totals` memos (refactor those to accept the filtered list).
-- UI built from existing shadcn primitives: `Input` (with `Search` icon from lucide), `Badge`/`Button` for toggleable chips, no new deps.
-- Add new i18n keys to `src/contexts/I18nContext.tsx`: `searchPlaceholder`, `filters`, `clearFilters`, `noMatches`, `showing` (EN + AR).
-- Region tab counts derived from `filteredJobs` so a tab disappears (or shows 0) when its region has no matches; auto-fall back to "all" if the active tab becomes empty.
-- Preserve existing `REGION_ORDER` / `BRANCH_ORDER` sorting and the priority/status badges in the table rows.
+- Add deps: `exceljs` + `file-saver` (+ `@types/file-saver`). Already capable of producing styled XLSX in the browser, no server function needed.
+- New helper: `src/lib/exportJobsXlsx.ts` — pure client function `exportJobsToXlsx(jobs)` that builds the workbook with ExcelJS, applies the fills/fonts/borders/merged title cell, sorts rows by `REGION_ORDER` then `BRANCH_ORDER` then title, and triggers download via `saveAs`.
+- Edit `src/routes/_app/jobs.tsx`:
+  - Import the helper + `Download` icon from lucide.
+  - Add a `<Button onClick={() => exportJobsToXlsx(filteredJobs)}>` in the toolbar (disabled when `filteredJobs.length === 0`).
+  - Button label is bilingual via two new i18n keys `exportExcel` ("Export Excel" / "تصدير Excel") added to `src/contexts/I18nContext.tsx`.
+- "Branch Classification" is derived: `Headquarters → Central Admin`, regions in {Riyadh, Jeddah, Qassim, Eastern Province, Madinah} → `Existing Branch`, others → `New Branch` (matches the source rule).
+- Stage column = `"All Stages"` for school branches, `"-"` for HQ. Work Type = `"Full-time"`. These mirror the workbook constants.
+- No Supabase changes; no new tables. The export runs entirely in the browser on whatever the Jobs query already returned.
 
 ## Out of scope
 
-- No URL/search-param persistence (can add later with the zod adapter if you want shareable filtered views).
-- No edit/create job actions — filtering only.
+- Exporting other sheets (Pipeline, Dashboard, etc.) — separate feature.
+- Server-side generation / emailed reports.

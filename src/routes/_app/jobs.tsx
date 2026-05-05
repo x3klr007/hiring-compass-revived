@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, Download } from "lucide-react";
+import { exportJobsToXlsx } from "@/lib/exportJobsXlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
 import { Card } from "@/components/ui/card";
@@ -171,6 +172,16 @@ function JobsPage() {
               <Badge variant="secondary" className="ms-1">{activeFilters}</Badge>
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={!filteredJobs.length}
+            onClick={() => exportJobsToXlsx(filteredJobs)}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {t("exportExcel")}
+          </Button>
         </div>
 
         <div className="flex flex-wrap gap-4">
