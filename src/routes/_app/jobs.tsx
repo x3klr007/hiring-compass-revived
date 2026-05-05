@@ -15,7 +15,31 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { MapPin, Calendar as CalendarIcon, Users, ArrowUp, ArrowDown } from "lucide-react";
 
-export const Route = createFileRoute("/_app/jobs")({ component: JobsPage });
+type JobsSearch = {
+  q?: string;
+  status?: string[];
+  priority?: string[];
+  region?: string;
+};
+
+export const Route = createFileRoute("/_app/jobs")({
+  component: JobsPage,
+  validateSearch: (raw: Record<string, unknown>): JobsSearch => {
+    const toArr = (v: unknown): string[] | undefined => {
+      if (Array.isArray(v)) return v.map(String).filter(Boolean);
+      if (typeof v === "string" && v.length) return v.split(",").filter(Boolean);
+      return undefined;
+    };
+    const q = typeof raw.q === "string" && raw.q ? raw.q : undefined;
+    const region = typeof raw.region === "string" && raw.region ? raw.region : undefined;
+    return {
+      ...(q ? { q } : {}),
+      ...(toArr(raw.status) ? { status: toArr(raw.status) } : {}),
+      ...(toArr(raw.priority) ? { priority: toArr(raw.priority) } : {}),
+      ...(region ? { region } : {}),
+    };
+  },
+});
 
 type Job = {
   id: string;
