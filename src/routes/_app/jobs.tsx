@@ -95,8 +95,13 @@ function JobsPage() {
     });
 
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [sortBy, setSortBy] = useState<"default" | "priority" | "region" | "branch" | "remaining" | "hired">("default");
+  type SortKey = "default" | "priority" | "region" | "branch" | "remaining" | "hired" | "code" | "title" | "status";
+  const [sortBy, setSortBy] = useState<SortKey>("default");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const toggleSort = (key: Exclude<SortKey, "default">) => {
+    if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortBy(key); setSortDir("asc"); }
+  };
 
   useEffect(() => {
     const trimmed = search.trim();
