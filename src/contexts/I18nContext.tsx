@@ -115,6 +115,7 @@ const translations = {
     templates: "القوالب",
     auditLog: "سجل التدقيق",
     driveFailures: "أعطال Drive",
+    retrySettings: "سياسة إعادة المحاولة",
     settings: "الإعدادات",
     signOut: "تسجيل الخروج",
     signIn: "تسجيل الدخول",
