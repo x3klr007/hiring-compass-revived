@@ -41,8 +41,21 @@ function shouldShortCircuit(): boolean {
   return true;
 }
 
+function parseStatusList(raw: string | undefined, fallback: number[]): number[] {
+  if (!raw) return fallback;
+  const out = raw
+    .split(/[,\s]+/)
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n >= 100 && n <= 599);
+  return out.length ? out : fallback;
+}
+
+const TRANSIENT_STATUSES = new Set<number>(
+  parseStatusList(process.env.DRIVE_RETRY_TRANSIENT_STATUSES, [408, 425, 429, 500, 502, 503, 504]),
+);
+
 function isTransientStatus(status: number) {
-  return status === 502 || status === 503 || status === 504;
+  return TRANSIENT_STATUSES.has(status);
 }
 
 function recordSuccess() {
