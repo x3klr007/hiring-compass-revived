@@ -63,7 +63,7 @@ function ScreeningPage() {
       );
     } catch (err) {
       const msg = (err as Error).message || "";
-      if (/401|unauthor|jwt|token|sign(\s|-)?in/i.test(msg)) {
+      if (msg === "UNAUTHENTICATED" || /401|unauthor|jwt|token|sign(\s|-)?in/i.test(msg)) {
         setAuthError(true);
       } else {
         toast.error(msg);
