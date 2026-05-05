@@ -123,7 +123,8 @@ function PipelinePage() {
                     key={c.id}
                     draggable
                     onDragStart={() => setDragId(c.id)}
-                    className="rounded-lg border bg-card/70 p-2.5 text-sm cursor-grab active:cursor-grabbing hover:shadow-md transition"
+                    onClick={() => { setSelected(c); setDialogTab(s.name === "Interview" ? "evaluate" : "message"); }}
+                    className="rounded-lg border bg-card/70 p-2.5 text-sm cursor-pointer hover:shadow-md transition"
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-medium truncate">{c.full_name}</div>
