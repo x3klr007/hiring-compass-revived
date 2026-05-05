@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useI18n } from "@/contexts/I18nContext";
 import { Card } from "@/components/ui/card";
 
@@ -30,5 +29,3 @@ export const Templates = makeStub("templates");
 export const Audit = makeStub("auditLog");
 export const Settings = makeStub("settings");
 
-// Placeholder route export so this file is a valid route module if ever imported.
-export const Route = createFileRoute("/_app/_stub")({ component: () => null });
