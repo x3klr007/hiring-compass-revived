@@ -9,13 +9,50 @@ import {
   extractTextFromBuffer,
   extractCandidateFromText,
   checkDriveGateway,
+  getRetryPolicySnapshot,
+  testRetryPolicy,
   type ExtractedCV,
+  type RetryPolicy,
 } from "./cv-ingest.server";
 
 export const checkDriveHealth = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     return await checkDriveGateway();
+  });
+
+export const getRetryPolicy = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    return getRetryPolicySnapshot();
+  });
+
+const retryPolicySchema = z.object({
+  maxAttempts: z.number().int().min(1).max(20),
+  baseDelayMs: z.number().int().min(0).max(60_000),
+  maxDelayMs: z.number().int().min(0).max(120_000),
+  factor: z.number().min(1).max(10),
+  jitter: z.number().min(0).max(1),
+  connectionErrorBonusAttempts: z.number().int().min(0).max(20),
+  connectionErrorBaseDelayMs: z.number().int().min(0).max(60_000),
+  transientStatuses: z.array(z.number().int().min(100).max(599)).optional(),
+});
+
+export const testRetryPolicyFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        policy: retryPolicySchema,
+        folderId: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    return await testRetryPolicy({
+      policy: data.policy as RetryPolicy,
+      folderId: data.folderId,
+    });
   });
 
 export type DriveFailureLog = {
