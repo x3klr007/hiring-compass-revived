@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Search, X, Download } from "lucide-react";
 import { exportJobsToXlsx } from "@/lib/exportJobsXlsx";
+import { exportJobsToCsv } from "@/lib/exportJobsCsv";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
 import { Card } from "@/components/ui/card";
