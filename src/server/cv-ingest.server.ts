@@ -308,17 +308,21 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
   const url = `${DRIVE_GATEWAY}/files?q=${q}&fields=files(id,name,mimeType,size)&pageSize=200`;
   const start = Date.now();
   console.log(`[listDriveFolder][${reqId}] folderId=${folderId} url=${url}`);
+  const fail = (status: number | "n/a", reason: string): never => {
+    const totalMs = Date.now() - start;
+    const detail = `LIST_FAILED reqId=${reqId} folderId=${folderId} status=${status} totalMs=${totalMs} url=${url} reason=${reason}`;
+    console.error(`[listDriveFolder][${reqId}] ${detail}`);
+    throw new Error(detail);
+  };
   let res: Response;
   try {
     res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list", DEFAULT_RETRY_POLICY, reqId);
   } catch (err) {
-    console.error(`[listDriveFolder][${reqId}] giving up after ${Date.now() - start}ms — folderId=${folderId}`, err);
-    throw err;
+    return fail("n/a", (err as Error)?.message ?? "unknown");
   }
   if (!res.ok) {
-    const body = await res.text();
-    console.error(`[listDriveFolder][${reqId}] non-OK status=${res.status} folderId=${folderId} totalMs=${Date.now() - start} body=${body.slice(0, 500)}`);
-    throw new Error(`Drive list failed [${res.status}]: ${body}`);
+    const body = await res.text().catch(() => "<unreadable>");
+    return fail(res.status, body.slice(0, 300));
   }
   const json = (await res.json()) as { files?: DriveFile[] };
   console.log(`[listDriveFolder][${reqId}] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
