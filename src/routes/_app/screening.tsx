@@ -65,7 +65,10 @@ function ScreeningPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onRun = async () => {
+  const isTransient = (msg: string) =>
+    /503|502|504|upstream|connection refused|network|timeout|fetch failed|ECONNRESET/i.test(msg);
+
+  const runIngest = async (opts: { autoRetry?: boolean } = {}) => {
     if (!link.trim()) {
       toast.error(lang === "ar" ? "أدخل رابط Google Drive" : "Paste a Google Drive link");
       return;
@@ -73,44 +76,71 @@ function ScreeningPage() {
     // Preflight health check
     const health = await runHealthCheck();
     if (!health.ok) {
-      toast.error(
+      setLastError(
         lang === "ar"
-          ? "خدمة Google Drive غير متوفرة حالياً. حاول مرة أخرى بعد قليل."
-          : "Google Drive service is currently unavailable. Please try again shortly."
+          ? `خدمة Google Drive غير متوفرة حالياً (${health.status ?? "—"}). ${health.error ?? ""}`
+          : `Google Drive service is unavailable (${health.status ?? "—"}). ${health.error ?? ""}`
       );
       return;
     }
+
     setRunning(true);
     setResults([]);
     setSummary(null);
     setAuthError(false);
-    try {
-      const res = await ingest({
-        data: {
-          link: link.trim(),
-          defaultJobId: defaultJobId || null,
-          defaultRegion: defaultRegion || null,
-        },
-      });
-      setResults(res.results);
-      setSummary({ total: res.total, skipped: res.skipped });
-      const ok = res.results.filter((r: IngestResult) => r.ok).length;
-      toast.success(
-        lang === "ar"
-          ? `تمت إضافة ${ok} مرشح من ${res.total}`
-          : `Imported ${ok} of ${res.total} candidates`
-      );
-    } catch (err) {
-      const msg = (err as Error).message || "";
-      if (msg === "UNAUTHENTICATED" || /401|unauthor|jwt|token|sign(\s|-)?in/i.test(msg)) {
-        setAuthError(true);
-      } else {
-        toast.error(msg);
+    setLastError(null);
+
+    const MAX = opts.autoRetry ? 3 : 1;
+    let lastMsg = "";
+    for (let i = 1; i <= MAX; i++) {
+      setAttempt(i);
+      try {
+        const res = await ingest({
+          data: {
+            link: link.trim(),
+            defaultJobId: defaultJobId || null,
+            defaultRegion: defaultRegion || null,
+          },
+        });
+        setResults(res.results);
+        setSummary({ total: res.total, skipped: res.skipped });
+        const ok = res.results.filter((r: IngestResult) => r.ok).length;
+        toast.success(
+          lang === "ar"
+            ? `تمت إضافة ${ok} مرشح من ${res.total}`
+            : `Imported ${ok} of ${res.total} candidates`
+        );
+        setRunning(false);
+        setAttempt(0);
+        return;
+      } catch (err) {
+        lastMsg = (err as Error).message || "";
+        if (lastMsg === "UNAUTHENTICATED" || /401|unauthor|jwt|token|sign(\s|-)?in/i.test(lastMsg)) {
+          setAuthError(true);
+          setRunning(false);
+          setAttempt(0);
+          return;
+        }
+        if (i < MAX && isTransient(lastMsg)) {
+          const delay = 800 * 2 ** (i - 1);
+          toast.message(
+            lang === "ar"
+              ? `فشلت المحاولة ${i}، إعادة المحاولة خلال ${Math.round(delay / 1000)} ثانية...`
+              : `Attempt ${i} failed, retrying in ${Math.round(delay / 1000)}s...`
+          );
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        break;
       }
-    } finally {
-      setRunning(false);
     }
+    setLastError(lastMsg);
+    setRunning(false);
+    setAttempt(0);
   };
+
+  const onRun = () => runIngest({ autoRetry: true });
+  const onRetry = () => runIngest({ autoRetry: true });
 
   return (
     <div className="space-y-6" dir={dir}>
