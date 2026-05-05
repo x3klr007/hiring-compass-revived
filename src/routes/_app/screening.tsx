@@ -18,6 +18,7 @@ type Job = { id: string; title: string; region: string };
 function ScreeningPage() {
   const { t, lang, dir } = useI18n();
   const ingest = useAuthedServerFn(ingestFromDriveLink);
+  const healthCheck = useAuthedServerFn(checkDriveHealth);
   const [link, setLink] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [defaultJobId, setDefaultJobId] = useState<string>("");
@@ -26,6 +27,10 @@ function ScreeningPage() {
   const [results, setResults] = useState<IngestResult[]>([]);
   const [summary, setSummary] = useState<{ total: number; skipped: number } | null>(null);
   const [authError, setAuthError] = useState(false);
+  const [driveHealth, setDriveHealth] = useState<
+    { ok: boolean; status?: number; latencyMs: number; error?: string; checkedAt: number } | null
+  >(null);
+  const [healthChecking, setHealthChecking] = useState(false);
 
   useEffect(() => {
     supabase
