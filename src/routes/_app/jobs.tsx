@@ -63,7 +63,6 @@ const REGION_ORDER = [
 const BRANCH_ORDER = ["Headquarters", "Boys School", "Girls School"];
 
 const STATUS_OPTIONS = ["Open", "Filled", "On Hold"];
-const PRIORITY_OPTIONS = ["High", "Normal"];
 
 function JobsPage() {
   const { t, lang } = useI18n();
