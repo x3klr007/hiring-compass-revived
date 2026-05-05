@@ -370,12 +370,20 @@ function JobsPage() {
           ) : !allJobs.length ? (
             <Card className="p-6 text-muted-foreground">{t("noData")}</Card>
           ) : !filteredJobs.length ? (
-            <Card className="p-10 text-center text-muted-foreground space-y-3">
-              <div>{t("noMatches")}</div>
-              <Button variant="outline" size="sm" onClick={clearAll}>
-                {t("clearFilters")}
-              </Button>
-            </Card>
+            <EmptyMatches
+              ar={ar}
+              allJobs={allJobs}
+              search={debouncedSearch}
+              statuses={statuses}
+              priorities={priorities}
+              region={tab}
+              onClearAll={clearAll}
+              onClearSearch={() => setSearch("")}
+              onClearStatuses={() => setStatuses(new Set())}
+              onClearPriorities={() => setPriorities(new Set())}
+              onClearRegion={() => setTab("all")}
+              onPickJob={setSelectedJob}
+            />
           ) : sortBy !== "default" ? (
             (() => {
               const flat = sortedJobs.filter((j) => tab === "all" || j.region === tab);
