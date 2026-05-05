@@ -393,7 +393,38 @@ function ScreeningPage() {
           </div>
         </div>
 
-        <Button onClick={onRun} disabled={running || (driveHealth ? !driveHealth.ok : false)} size="lg" className="w-full md:w-auto">
+        <div className="space-y-2">
+          <Label>{lang === "ar" ? "الجنس (تصفية السير الذاتية)" : "Gender filter"}</Label>
+          <div className="flex flex-wrap gap-2">
+            {([
+              { v: "any", ar: "الكل", en: "All" },
+              { v: "male", ar: "للبنين فقط", en: "Males only" },
+              { v: "female", ar: "للبنات فقط", en: "Females only" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => setGenderFilter(opt.v)}
+                className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                  genderFilter === opt.v
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background hover:bg-muted"
+                }`}
+              >
+                {lang === "ar" ? opt.ar : opt.en}
+              </button>
+            ))}
+          </div>
+          {genderFilter !== "any" && (
+            <p className="text-xs text-muted-foreground">
+              {lang === "ar"
+                ? "سيتم تجاهل السير الذاتية التي لا تطابق الجنس المختار."
+                : "CVs that don't match the selected gender will be skipped."}
+            </p>
+          )}
+        </div>
+
+        <Button onClick={onRun} disabled={running || (driveHealth ? !driveHealth.ok : false) || (link.trim() ? !parseDriveLinkClient(link) : false)} size="lg" className="w-full md:w-auto">
           {running ? (
             <>
               <Loader2 className="me-2 h-4 w-4 animate-spin" />
