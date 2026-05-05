@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { MapPin, Calendar as CalendarIcon, Users } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { MapPin, Calendar as CalendarIcon, Users, ArrowUp, ArrowDown } from "lucide-react";
 
 export const Route = createFileRoute("/_app/jobs")({ component: JobsPage });
 
@@ -50,6 +51,8 @@ function JobsPage() {
   const [statuses, setStatuses] = useState<Set<string>>(new Set());
   const [priorities, setPriorities] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [sortBy, setSortBy] = useState<"default" | "priority" | "region" | "branch" | "remaining" | "hired">("default");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 200);
@@ -81,6 +84,36 @@ function JobsPage() {
       return true;
     });
   }, [allJobs, statuses, priorities, debouncedSearch]);
+
+  const sortedJobs = useMemo(() => {
+    if (sortBy === "default") return filteredJobs;
+    const dir = sortDir === "asc" ? 1 : -1;
+    const priorityRank = (p: string) => (p === "High" ? 0 : 1);
+    const regionRank = (r: string) => {
+      const i = REGION_ORDER.indexOf(r);
+      return i === -1 ? 999 : i;
+    };
+    const branchRank = (b: string) => {
+      const i = BRANCH_ORDER.indexOf(b);
+      return i === -1 ? 999 : i;
+    };
+    const key = (j: Job): number | string => {
+      switch (sortBy) {
+        case "priority": return priorityRank(j.priority);
+        case "region": return regionRank(j.region);
+        case "branch": return branchRank(j.branch);
+        case "remaining": return Math.max(0, j.headcount - j.hired_count);
+        case "hired": return j.hired_count;
+        default: return 0;
+      }
+    };
+    return [...filteredJobs].sort((a, b) => {
+      const ka = key(a), kb = key(b);
+      if (ka < kb) return -1 * dir;
+      if (ka > kb) return 1 * dir;
+      return a.title.localeCompare(b.title);
+    });
+  }, [filteredJobs, sortBy, sortDir]);
 
   const grouped = useMemo(() => {
     const byRegion = new Map<string, Map<string, Job[]>>();
@@ -180,6 +213,32 @@ function JobsPage() {
               <Badge variant="secondary" className="ms-1">{activeFilters}</Badge>
             </Button>
           )}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">{t("sortBy")}:</span>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-9 w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">{t("default")}</SelectItem>
+                <SelectItem value="priority">{t("priority")}</SelectItem>
+                <SelectItem value="region">{t("region")}</SelectItem>
+                <SelectItem value="branch">{t("branch")}</SelectItem>
+                <SelectItem value="remaining">{t("remainingVacancies")}</SelectItem>
+                <SelectItem value="hired">{t("hired")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              disabled={sortBy === "default"}
+              onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+              aria-label="Toggle sort direction"
+            >
+              {sortDir === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+            </Button>
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -250,6 +309,76 @@ function JobsPage() {
                 {t("clearFilters")}
               </Button>
             </Card>
+          ) : sortBy !== "default" ? (
+            (() => {
+              const flat = sortedJobs.filter((j) => tab === "all" || j.region === tab);
+              return (
+                <Card className="glass shadow-elegant overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
+                    <h2 className="text-sm font-medium text-muted-foreground">
+                      {t("sortedBy")}: <span className="text-foreground font-semibold">{labelForSort(sortBy, t)}</span>{" "}
+                      {sortDir === "asc" ? "↑" : "↓"}
+                    </h2>
+                    <Badge variant="secondary">
+                      {flat.length} {ar ? "شاغر" : "vacancies"}
+                    </Badge>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground bg-background/40">
+                      <tr>
+                        <th className="px-5 py-2 text-start font-normal w-28">{t("code")}</th>
+                        <th className="px-4 py-2 text-start font-normal">{t("title")}</th>
+                        <th className="px-4 py-2 text-start font-normal w-32">{t("region")}</th>
+                        <th className="px-4 py-2 text-start font-normal w-32">{t("branch")}</th>
+                        <th className="px-4 py-2 text-start font-normal w-24">{ar ? "الأولوية" : "Priority"}</th>
+                        <th className="px-4 py-2 text-end font-normal w-20">{t("headcount")}</th>
+                        <th className="px-4 py-2 text-end font-normal w-20">{t("hired")}</th>
+                        <th className="px-4 py-2 text-end font-normal w-24">{t("remaining")}</th>
+                        <th className="px-4 py-2 text-start font-normal w-24">{t("status")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {flat.map((j) => {
+                        const remaining = Math.max(0, j.headcount - j.hired_count);
+                        return (
+                          <tr
+                            key={j.id}
+                            onClick={() => setSelectedJob(j)}
+                            className="border-t border-border/60 cursor-pointer hover:bg-muted/40 transition-colors"
+                          >
+                            <td className="px-5 py-2 font-mono text-xs">
+                              <Highlight text={j.job_code} match={debouncedSearch} />
+                            </td>
+                            <td className="px-4 py-2">
+                              <Highlight text={j.title} match={debouncedSearch} />
+                            </td>
+                            <td className="px-4 py-2">{j.region}</td>
+                            <td className="px-4 py-2">
+                              <span className="inline-flex items-center gap-1.5">
+                                <BranchIcon branch={j.branch} /> {j.branch}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <Badge variant={j.priority === "High" ? "destructive" : "outline"}>
+                                {j.priority}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-2 text-end tabular-nums">{j.headcount}</td>
+                            <td className="px-4 py-2 text-end tabular-nums">{j.hired_count}</td>
+                            <td className="px-4 py-2 text-end tabular-nums font-medium">{remaining}</td>
+                            <td className="px-4 py-2">
+                              <Badge variant={j.status === "Open" ? "default" : "secondary"}>
+                                {j.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </Card>
+              );
+            })()
           ) : (
             visibleRegions.map((region) => {
               const branches = grouped.byRegion.get(region)!;
@@ -530,6 +659,17 @@ function Chip({
       {children}
     </button>
   );
+}
+
+function labelForSort(sortBy: string, t: (k: any) => string) {
+  switch (sortBy) {
+    case "priority": return t("priority");
+    case "region": return t("region");
+    case "branch": return t("branch");
+    case "remaining": return t("remainingVacancies");
+    case "hired": return t("hired");
+    default: return t("default");
+  }
 }
 
 function BranchIcon({ branch }: { branch: string }) {

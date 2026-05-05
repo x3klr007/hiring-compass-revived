@@ -1,30 +1,37 @@
-# Job Details Modal
+# Sortable Jobs Page
 
-Make every row in the Jobs table clickable. Opens a modal with a rich overview of that vacancy.
+Add a sort dropdown to the Jobs page so users can reorder vacancies by priority, region, branch, or remaining headcount.
 
 ## What you'll see
 
-Click anywhere on a job row → a centered dialog opens with:
+A new **Sort by** dropdown placed next to the Search input in the filter toolbar, with options:
 
-- **Header**: Job title (large) + bilingual subtitle, plus colored badges for `priority`, `status`, and a branch-classification chip (HQ / Existing / New Branch).
-- **Identity strip**: monospace `job_code`, region (with map-pin icon), branch (with branch icon), opened-on date.
-- **Hiring progress card**: big "X / Y filled" with a progress bar (`hired_count / headcount`), a `Remaining: N` chip, and color tone (green when fully filled, amber when partial, primary when empty).
-- **Pipeline stats card** (live, from `candidates` joined on `job_id`): total candidates for this job, breakdown by stage (Applied / Screening / Interview / Offer / Hired / Rejected) shown as small chips. Falls back to "No candidates yet" when empty.
-- **Description**: long-form `description` text in a muted panel; if null, shows a friendly placeholder ("No description provided").
-- **Footer**: timestamps (created_at, opened_at, target_fill_date if set) and a "Close" button.
+- **Default** (Region → Branch → Title — current behavior)
+- **Priority** (High first)
+- **Region** (workbook order: Riyadh, Jeddah, ... Jazan)
+- **Branch** (HQ → Boys School → Girls School)
+- **Remaining vacancies** (`headcount − hired_count`, highest first)
+- **Hired count** (highest first)
 
-Bilingual EN/AR with RTL-aware spacing. Clicking outside or pressing Esc closes it.
+Next to the dropdown, a small **direction toggle** (↑ / ↓) flips ascending/descending. Active sort is reflected in a subtle badge ("Sorted by Priority ↓").
+
+When sort = Default, the existing Region tabs and grouped Branch tables stay exactly as they are. When any other sort is active, the page automatically switches to a **single flat table view** (one table, columns: Code · Title · Region · Branch · Priority · Headcount · Hired · Remaining · Status) so the chosen ordering is visible end-to-end. Region tabs still filter the visible rows. Switching back to Default restores the grouped view.
+
+Bilingual labels (EN/AR), RTL-aware.
 
 ## Technical notes
 
-- Edit only `src/routes/_app/jobs.tsx`. No DB schema changes (`description`, `opened_at`, `target_fill_date` already exist on `jobs`).
-- Add a controlled `selectedJob: Job | null` state. Make the `<tr>` `cursor-pointer hover:bg-muted/40` and bind `onClick={() => setSelectedJob(j)}`.
-- Use shadcn `Dialog` (already installed) for the modal; `Progress` for the fill bar.
-- Pipeline stats: a small `useQuery({ queryKey: ['job-candidates', selectedJob.id], enabled: !!selectedJob })` hook fetches `candidates` filtered by `job_id` and groups by `stage` client-side. Lightweight (RLS already permits authenticated reads).
-- Add 4 i18n keys: `noDescription`, `remaining`, `pipelineOverview`, `openedOn` (EN + AR).
-- Keep all existing filtering/grouping/export logic intact.
+- Edit only `src/routes/_app/jobs.tsx`.
+- New state: `sortBy: 'default' | 'priority' | 'region' | 'branch' | 'remaining' | 'hired'` and `sortDir: 'asc' | 'desc'`.
+- Add a `sortedJobs = useMemo(...)` derived from `filteredJobs`. Default sort uses existing `REGION_ORDER` / `BRANCH_ORDER`. Priority maps `High=0, Normal=1`. Region/branch sorts use the same ordered indexes. Remaining = `headcount − hired_count`. Numeric sorts respect `sortDir`.
+- Render flow:
+  - `sortBy === 'default'` → existing `grouped` region/branch view (unchanged).
+  - Otherwise → single `<Card>` with one `<table>` listing `sortedJobs` (filtered by active region tab when not "all"). Reuse the existing row click-to-open-details and `<Highlight>` for search matches.
+- Use shadcn `Select` (already installed) for the dropdown; small ghost `<Button>` for the direction toggle.
+- Add 4 i18n keys: `sortBy`, `default`, `remainingVacancies`, `sortAsc`/`sortDesc` (EN + AR).
+- Export-to-Excel keeps using `filteredJobs` (workbook ordering remains canonical for exports).
 
 ## Out of scope
 
-- Editing job fields from the modal (read-only view for now).
-- Linking through to a per-job pipeline page — can come later.
+- Multi-column sorting (single key + direction is enough).
+- URL persistence of sort state (can be added later with the search-params adapter).
