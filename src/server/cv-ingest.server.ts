@@ -247,6 +247,7 @@ export function getRetryPolicySnapshot() {
       DRIVE_RETRY_CONN_BASE_DELAY_MS: process.env.DRIVE_RETRY_CONN_BASE_DELAY_MS ?? null,
       DRIVE_RETRY_TRANSIENT_STATUSES: process.env.DRIVE_RETRY_TRANSIENT_STATUSES ?? null,
     },
+    issues: getRetryEnvIssues(),
   };
 }
 
