@@ -69,19 +69,46 @@ const PRIORITY_OPTIONS = ["High", "Normal"];
 function JobsPage() {
   const { t, lang } = useI18n();
   const ar = lang === "ar";
-  const [tab, setTab] = useState<string>("all");
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statuses, setStatuses] = useState<Set<string>>(new Set());
-  const [priorities, setPriorities] = useState<Set<string>>(new Set());
+  const search_ = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+
+  const tab = search_.region ?? "all";
+  const setTab = (v: string) =>
+    navigate({
+      search: (prev) => ({ ...prev, region: v === "all" ? undefined : v }),
+      replace: true,
+    });
+
+  const [search, setSearch] = useState(search_.q ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState((search_.q ?? "").toLowerCase());
+  const statuses = useMemo(() => new Set(search_.status ?? []), [search_.status]);
+  const priorities = useMemo(() => new Set(search_.priority ?? []), [search_.priority]);
+  const setStatuses = (s: Set<string>) =>
+    navigate({
+      search: (prev) => ({ ...prev, status: s.size ? [...s] : undefined }),
+      replace: true,
+    });
+  const setPriorities = (s: Set<string>) =>
+    navigate({
+      search: (prev) => ({ ...prev, priority: s.size ? [...s] : undefined }),
+      replace: true,
+    });
+
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [sortBy, setSortBy] = useState<"default" | "priority" | "region" | "branch" | "remaining" | "hired">("default");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 200);
+    const trimmed = search.trim();
+    const id = setTimeout(() => {
+      setDebouncedSearch(trimmed.toLowerCase());
+      navigate({
+        search: (prev) => ({ ...prev, q: trimmed || undefined }),
+        replace: true,
+      });
+    }, 200);
     return () => clearTimeout(id);
-  }, [search]);
+  }, [search, navigate]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["jobs"],
