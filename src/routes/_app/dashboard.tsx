@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Briefcase, Users, MapPin, Building2, TrendingUp, Sparkles } from "lucide-react";
+import { Briefcase, Users, MapPin, Building2, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -51,7 +51,6 @@ function Dashboard() {
     const totalHeadcount = jobs.reduce((a, j) => a + (j.headcount || 0), 0);
     const totalHired = jobs.reduce((a, j) => a + (j.hired_count || 0), 0);
     const open = jobs.filter((j) => j.status === "Open").length;
-    const high = jobs.filter((j) => j.priority === "High").length;
     const regions = new Set(jobs.map((j) => j.region)).size;
     const branches = new Set(jobs.map((j) => `${j.region}|${j.branch}`)).size;
 
@@ -73,7 +72,7 @@ function Dashboard() {
       }, {}),
     ).sort((a, b) => b[1] - a[1]);
 
-    return { totalHeadcount, totalHired, open, high, regions, branches, byRegion, byRole };
+    return { totalHeadcount, totalHired, open, regions, branches, byRegion, byRole };
   }, [jobs]);
 
   const fillRate = stats.totalHeadcount
@@ -101,13 +100,6 @@ function Dashboard() {
       icon: MapPin,
       sub: `${stats.branches} ${ar ? "فرعاً" : "branches"}`,
       tone: "success",
-    },
-    {
-      label: ar ? "أولوية عالية" : "High Priority",
-      value: stats.high,
-      icon: Sparkles,
-      sub: ar ? "فروع جديدة" : "new branches",
-      tone: "warning",
     },
   ];
 
@@ -145,7 +137,6 @@ function Dashboard() {
               <MiniStat label={ar ? "مفتوح" : "Open"} value={stats.open} />
               <MiniStat label={ar ? "تم التوظيف" : "Hired"} value={stats.totalHired} />
               <MiniStat label={ar ? "المتبقي" : "Remaining"} value={stats.totalHeadcount - stats.totalHired} />
-              <MiniStat label={ar ? "أولوية عالية" : "Urgent"} value={stats.high} />
             </div>
           </div>
         </CardContent>
