@@ -212,34 +212,79 @@ function ScreeningPage() {
         </Card>
       )}
 
-      {lastError && !authError && (
-        <Card className="glass border-destructive/50 p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-          <div className="flex-1 text-sm">
-            <div className="font-medium">
-              {lang === "ar" ? "فشل جلب ملفات Drive" : "Failed to fetch Drive files"}
+      {lastError && !authError && (() => {
+        const m = lastError.match(/LIST_FAILED reqId=(\S+) folderId=(\S+) status=(\S+) totalMs=(\d+) url=(\S+) reason=([\s\S]*)$/);
+        const isListFail = !!m;
+        const reqId = m?.[1];
+        const folderId = m?.[2];
+        const status = m?.[3];
+        const totalMs = m?.[4];
+        const url = m?.[5];
+        const reason = m?.[6];
+        return (
+          <Card className="glass border-destructive/50 p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm min-w-0">
+              <div className="font-medium">
+                {lang === "ar" ? "فشل جلب ملفات Drive" : "Failed to fetch Drive files"}
+              </div>
+              {isListFail ? (
+                <div className="mt-2 space-y-1">
+                  <div className="text-muted-foreground break-words">
+                    {lang === "ar" ? "السبب:" : "Reason:"} <span className="text-foreground">{reason}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono text-muted-foreground">
+                    <div>reqId: <span className="text-foreground">{reqId}</span></div>
+                    <div>status: <span className="text-foreground">{status}</span></div>
+                    <div>folderId: <span className="text-foreground break-all">{folderId}</span></div>
+                    <div>duration: <span className="text-foreground">{totalMs}ms</span></div>
+                    <div className="sm:col-span-2 break-all">url: <span className="text-foreground">{url}</span></div>
+                  </div>
+                  <details className="text-xs mt-1">
+                    <summary className="cursor-pointer text-muted-foreground">
+                      {lang === "ar" ? "تفاصيل السجل الكاملة" : "Full log line"}
+                    </summary>
+                    <pre className="mt-1 whitespace-pre-wrap break-all bg-muted/40 p-2 rounded">{lastError}</pre>
+                  </details>
+                </div>
+              ) : (
+                <div className="text-muted-foreground mt-1 break-words">{lastError}</div>
+              )}
+              <div className="text-xs text-muted-foreground mt-2">
+                {lang === "ar"
+                  ? "تمت إعادة المحاولة تلقائياً. يمكنك المحاولة يدوياً عبر زر إعادة التشغيل."
+                  : "We auto-retried. You can run it again manually using the retry button."}
+              </div>
             </div>
-            <div className="text-muted-foreground mt-1 break-words">{lastError}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {lang === "ar"
-                ? "تمت إعادة المحاولة تلقائياً. يمكنك المحاولة يدوياً عبر زر إعادة التشغيل."
-                : "We auto-retried. You can run it again manually using the retry button."}
+            <div className="flex flex-col gap-2 shrink-0">
+              <Button size="sm" onClick={onRetry} disabled={running}>
+                {running ? (
+                  <>
+                    <Loader2 className="me-2 h-3 w-3 animate-spin" />
+                    {lang === "ar" ? `محاولة ${attempt}` : `Attempt ${attempt}`}
+                  </>
+                ) : lang === "ar" ? (
+                  "إعادة التشغيل"
+                ) : (
+                  "Retry now"
+                )}
+              </Button>
+              {isListFail && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(lastError);
+                    toast.success(lang === "ar" ? "تم نسخ تفاصيل السجل" : "Log details copied");
+                  }}
+                >
+                  {lang === "ar" ? "نسخ السجل" : "Copy log"}
+                </Button>
+              )}
             </div>
-          </div>
-          <Button size="sm" onClick={onRetry} disabled={running}>
-            {running ? (
-              <>
-                <Loader2 className="me-2 h-3 w-3 animate-spin" />
-                {lang === "ar" ? `محاولة ${attempt}` : `Attempt ${attempt}`}
-              </>
-            ) : lang === "ar" ? (
-              "إعادة التشغيل"
-            ) : (
-              "Retry now"
-            )}
-          </Button>
-        </Card>
-      )}
+          </Card>
+        );
+      })()}
 
       {driveHealth && (
         <Card
