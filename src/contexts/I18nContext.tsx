@@ -85,6 +85,7 @@ const translations = {
     clearFilters: "Clear",
     noMatches: "No jobs match your filters",
     showing: "Showing",
+    exportExcel: "Export Excel",
     of: "of",
     accessDenied: "Access denied",
     adminsOnly: "This area is restricted to administrators.",
