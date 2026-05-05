@@ -25,6 +25,7 @@ function ScreeningPage() {
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<IngestResult[]>([]);
   const [summary, setSummary] = useState<{ total: number; skipped: number } | null>(null);
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     supabase
