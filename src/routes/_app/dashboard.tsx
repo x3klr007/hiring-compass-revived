@@ -41,7 +41,7 @@ function Dashboard() {
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["jobs", "dashboard"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("jobs").select("*");
+      const { data, error } = await supabase.from("jobs").select("id,title,region,branch,headcount,hired_count,status");
       if (error) throw error;
       return data as Job[];
     },
