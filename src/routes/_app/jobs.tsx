@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { MapPin, Calendar as CalendarIcon, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_app/jobs")({ component: JobsPage });
 
@@ -23,6 +26,10 @@ type Job = {
   hired_count: number;
   status: string;
   priority: string;
+  description?: string | null;
+  opened_at?: string | null;
+  target_fill_date?: string | null;
+  created_at?: string | null;
 };
 
 const REGION_ORDER = [
@@ -42,6 +49,7 @@ function JobsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statuses, setStatuses] = useState<Set<string>>(new Set());
   const [priorities, setPriorities] = useState<Set<string>>(new Set());
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 200);
@@ -282,7 +290,11 @@ function JobsPage() {
                             </thead>
                             <tbody>
                               {list.map((j) => (
-                                <tr key={j.id} className="border-t border-border/60">
+                                <tr
+                                  key={j.id}
+                                  onClick={() => setSelectedJob(j)}
+                                  className="border-t border-border/60 cursor-pointer hover:bg-muted/40 transition-colors"
+                                >
                                   <td className="px-5 py-2 font-mono text-xs">
                                     <Highlight text={j.job_code} match={debouncedSearch} />
                                   </td>
@@ -315,7 +327,154 @@ function JobsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <JobDetailsDialog job={selectedJob} onClose={() => setSelectedJob(null)} ar={ar} t={t} />
     </div>
+  );
+}
+
+function JobDetailsDialog({
+  job, onClose, ar, t,
+}: { job: Job | null; onClose: () => void; ar: boolean; t: (k: any) => string }) {
+  const { data: candidates } = useQuery({
+    queryKey: ["job-candidates", job?.id],
+    enabled: !!job,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("candidates")
+        .select("id,stage,status,full_name,score")
+        .eq("job_id", job!.id);
+      if (error) throw error;
+      return data as Array<{ id: string; stage: string; status: string; full_name: string; score: number }>;
+    },
+  });
+
+  const open = !!job;
+  const fillPct = job && job.headcount ? Math.round((job.hired_count / job.headcount) * 100) : 0;
+  const remaining = job ? Math.max(0, job.headcount - job.hired_count) : 0;
+  const tone =
+    fillPct >= 100 ? "var(--success)" : fillPct > 0 ? "var(--warning)" : "var(--primary)";
+
+  const stages = useMemo(() => {
+    const map = new Map<string, number>();
+    (candidates ?? []).forEach((c) => map.set(c.stage, (map.get(c.stage) ?? 0) + 1));
+    return [...map.entries()];
+  }, [candidates]);
+
+  const classification =
+    job?.branch === "Headquarters"
+      ? "Central Admin"
+      : ["Riyadh", "Jeddah", "Qassim", "Eastern Province", "Madinah"].includes(job?.region ?? "")
+        ? "Existing Branch"
+        : "New Branch";
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl glass max-h-[90vh] overflow-y-auto">
+        {job && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-xs text-muted-foreground">{job.job_code}</span>
+                <Badge variant={job.priority === "High" ? "destructive" : "outline"}>{job.priority}</Badge>
+                <Badge variant={job.status === "Open" ? "default" : "secondary"}>{job.status}</Badge>
+                <Badge variant="outline">{classification}</Badge>
+              </div>
+              <DialogTitle className="text-2xl">{job.title}</DialogTitle>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap pt-1">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {job.region}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <BranchIcon branch={job.branch} /> {job.branch}
+                </span>
+                {job.opened_at && (
+                  <span className="flex items-center gap-1.5">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {t("openedOn")}: {new Date(job.opened_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              {/* Hiring progress */}
+              <div className="rounded-lg border border-border bg-background/40 p-4">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">
+                  {ar ? "تقدم التوظيف" : "Hiring Progress"}
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-bold tabular-nums" style={{ color: tone }}>
+                    {job.hired_count}
+                  </span>
+                  <span className="text-muted-foreground">
+                    / {job.headcount} {ar ? "تم شغلها" : "filled"}
+                  </span>
+                </div>
+                <Progress value={fillPct} className="h-2 mt-3" />
+                <div className="flex justify-between text-xs mt-2 text-muted-foreground">
+                  <span>{fillPct}%</span>
+                  <span>
+                    {t("remaining")}: <strong className="text-foreground">{remaining}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Pipeline overview */}
+              <div className="rounded-lg border border-border bg-background/40 p-4">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5" /> {t("pipelineOverview")}
+                </div>
+                <div className="mt-2 text-3xl font-bold tabular-nums">
+                  {candidates?.length ?? 0}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {ar ? "إجمالي المرشحين" : "total candidates"}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {stages.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">{t("noCandidatesYet")}</span>
+                  ) : (
+                    stages.map(([stage, count]) => (
+                      <Badge key={stage} variant="secondary" className="text-xs">
+                        {stage} · {count}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mt-4">
+              <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                {ar ? "الوصف" : "Description"}
+              </div>
+              <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm whitespace-pre-wrap min-h-[80px]">
+                {job.description?.trim() || (
+                  <span className="text-muted-foreground italic">{t("noDescription")}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Footer meta */}
+            <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
+              {job.target_fill_date && (
+                <span>
+                  {t("targetFill")}: {new Date(job.target_fill_date).toLocaleDateString()}
+                </span>
+              )}
+              {job.created_at && (
+                <span>
+                  {ar ? "تم الإنشاء" : "Created"}: {new Date(job.created_at).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
