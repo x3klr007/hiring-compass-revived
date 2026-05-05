@@ -31,6 +31,8 @@ function ScreeningPage() {
     { ok: boolean; status?: number; latencyMs: number; error?: string; checkedAt: number } | null
   >(null);
   const [healthChecking, setHealthChecking] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     supabase
