@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Users, MapPin, Building2, TrendingUp, X } from "lucide-react";
+import { Briefcase, Users, MapPin, Building2, TrendingUp, X, Download } from "lucide-react";
+import { exportDashboardPdf } from "@/lib/exportDashboardPdf";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -187,6 +188,30 @@ function Dashboard() {
               {ar ? "مسح" : "Clear"}
             </Button>
           )}
+          <Button
+            size="sm"
+            onClick={() =>
+              exportDashboardPdf({
+                generatedAt: new Date(),
+                filters: {
+                  region: regionFilter === "all" ? (ar ? "كل المناطق" : "All") : regionFilter,
+                  branch: branchFilter === "all" ? (ar ? "كل الفروع" : "All") : branchFilter,
+                },
+                fillRate,
+                kpis: kpis.map((k) => ({ label: k.label, value: k.value, sub: k.sub })),
+                byRegion: stats.byRegion,
+                byRole: stats.byRole,
+                totals: {
+                  headcount: stats.totalHeadcount,
+                  hired: stats.totalHired,
+                  open: stats.open,
+                },
+              })
+            }
+          >
+            <Download className="h-4 w-4 mr-1" />
+            {ar ? "تصدير PDF" : "Export PDF"}
+          </Button>
         </div>
       </div>
       <Card className="glass shadow-elegant overflow-hidden relative">
