@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
+import { useAuthedServerFn } from "@/hooks/useAuthedServerFn";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,7 @@ type Job = { id: string; title: string; region: string };
 
 function ScreeningPage() {
   const { t, lang, dir } = useI18n();
-  const ingest = useServerFn(ingestFromDriveLink);
+  const ingest = useAuthedServerFn(ingestFromDriveLink);
   const [link, setLink] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [defaultJobId, setDefaultJobId] = useState<string>("");
@@ -46,15 +46,7 @@ function ScreeningPage() {
     setSummary(null);
     setAuthError(false);
     try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
-      if (!token) {
-        setAuthError(true);
-        setRunning(false);
-        return;
-      }
       const res = await ingest({
-        headers: { Authorization: `Bearer ${token}` },
         data: {
           link: link.trim(),
           defaultJobId: defaultJobId || null,
@@ -63,7 +55,7 @@ function ScreeningPage() {
       });
       setResults(res.results);
       setSummary({ total: res.total, skipped: res.skipped });
-      const ok = res.results.filter((r) => r.ok).length;
+      const ok = res.results.filter((r: IngestResult) => r.ok).length;
       toast.success(
         lang === "ar"
           ? `تمت إضافة ${ok} مرشح من ${res.total}`
@@ -71,7 +63,7 @@ function ScreeningPage() {
       );
     } catch (err) {
       const msg = (err as Error).message || "";
-      if (/401|unauthor|jwt|token|sign(\s|-)?in/i.test(msg)) {
+      if (msg === "UNAUTHENTICATED" || /401|unauthor|jwt|token|sign(\s|-)?in/i.test(msg)) {
         setAuthError(true);
       } else {
         toast.error(msg);
