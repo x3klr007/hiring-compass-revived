@@ -450,11 +450,19 @@ function ScreeningPage() {
                 ? `النتائج: ${results.filter((r) => r.ok).length} / ${summary.total}`
                 : `Results: ${results.filter((r) => r.ok).length} / ${summary.total}`}
             </div>
-            {summary.skipped > 0 && (
-              <Badge variant="secondary">
-                {summary.skipped} {lang === "ar" ? "متجاهل" : "skipped"}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {summary.skipped > 0 && (
+                <Badge variant="secondary">
+                  {summary.skipped} {lang === "ar" ? "متجاهل" : "skipped"}
+                </Badge>
+              )}
+              {summary.filteredByGender ? (
+                <Badge variant="outline">
+                  {summary.filteredByGender}{" "}
+                  {lang === "ar" ? "مستبعد بالجنس" : "filtered by gender"}
+                </Badge>
+              ) : null}
+            </div>
           </div>
           <div className="space-y-2">
             {results.map((r, i) => (
