@@ -471,11 +471,6 @@ function JobsPage() {
                                   <td className="px-4 py-2">
                                     <Highlight text={j.title} match={debouncedSearch} />
                                   </td>
-                                  <td className="px-4 py-2">
-                                    <Badge variant={j.priority === "High" ? "destructive" : "outline"}>
-                                      {j.priority}
-                                    </Badge>
-                                  </td>
                                   <td className="px-4 py-2">{j.headcount}</td>
                                   <td className="px-4 py-2">{j.hired_count}</td>
                                   <td className="px-4 py-2">
