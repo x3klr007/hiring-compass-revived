@@ -31,6 +31,8 @@ function ScreeningPage() {
     { ok: boolean; status?: number; latencyMs: number; error?: string; checkedAt: number } | null
   >(null);
   const [healthChecking, setHealthChecking] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     supabase
@@ -48,7 +50,7 @@ function ScreeningPage() {
       setDriveHealth({ ...res, checkedAt: Date.now() });
       return res;
     } catch (err) {
-      const r = { ok: false, latencyMs: 0, error: (err as Error).message, checkedAt: Date.now() };
+      const r = { ok: false, status: undefined as number | undefined, latencyMs: 0, error: (err as Error).message, checkedAt: Date.now() };
       setDriveHealth(r);
       return r;
     } finally {
@@ -63,7 +65,10 @@ function ScreeningPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onRun = async () => {
+  const isTransient = (msg: string) =>
+    /503|502|504|upstream|connection refused|network|timeout|fetch failed|ECONNRESET/i.test(msg);
+
+  const runIngest = async (opts: { autoRetry?: boolean } = {}) => {
     if (!link.trim()) {
       toast.error(lang === "ar" ? "أدخل رابط Google Drive" : "Paste a Google Drive link");
       return;
@@ -71,44 +76,71 @@ function ScreeningPage() {
     // Preflight health check
     const health = await runHealthCheck();
     if (!health.ok) {
-      toast.error(
+      setLastError(
         lang === "ar"
-          ? "خدمة Google Drive غير متوفرة حالياً. حاول مرة أخرى بعد قليل."
-          : "Google Drive service is currently unavailable. Please try again shortly."
+          ? `خدمة Google Drive غير متوفرة حالياً (${health.status ?? "—"}). ${health.error ?? ""}`
+          : `Google Drive service is unavailable (${health.status ?? "—"}). ${health.error ?? ""}`
       );
       return;
     }
+
     setRunning(true);
     setResults([]);
     setSummary(null);
     setAuthError(false);
-    try {
-      const res = await ingest({
-        data: {
-          link: link.trim(),
-          defaultJobId: defaultJobId || null,
-          defaultRegion: defaultRegion || null,
-        },
-      });
-      setResults(res.results);
-      setSummary({ total: res.total, skipped: res.skipped });
-      const ok = res.results.filter((r: IngestResult) => r.ok).length;
-      toast.success(
-        lang === "ar"
-          ? `تمت إضافة ${ok} مرشح من ${res.total}`
-          : `Imported ${ok} of ${res.total} candidates`
-      );
-    } catch (err) {
-      const msg = (err as Error).message || "";
-      if (msg === "UNAUTHENTICATED" || /401|unauthor|jwt|token|sign(\s|-)?in/i.test(msg)) {
-        setAuthError(true);
-      } else {
-        toast.error(msg);
+    setLastError(null);
+
+    const MAX = opts.autoRetry ? 3 : 1;
+    let lastMsg = "";
+    for (let i = 1; i <= MAX; i++) {
+      setAttempt(i);
+      try {
+        const res = await ingest({
+          data: {
+            link: link.trim(),
+            defaultJobId: defaultJobId || null,
+            defaultRegion: defaultRegion || null,
+          },
+        });
+        setResults(res.results);
+        setSummary({ total: res.total, skipped: res.skipped });
+        const ok = res.results.filter((r: IngestResult) => r.ok).length;
+        toast.success(
+          lang === "ar"
+            ? `تمت إضافة ${ok} مرشح من ${res.total}`
+            : `Imported ${ok} of ${res.total} candidates`
+        );
+        setRunning(false);
+        setAttempt(0);
+        return;
+      } catch (err) {
+        lastMsg = (err as Error).message || "";
+        if (lastMsg === "UNAUTHENTICATED" || /401|unauthor|jwt|token|sign(\s|-)?in/i.test(lastMsg)) {
+          setAuthError(true);
+          setRunning(false);
+          setAttempt(0);
+          return;
+        }
+        if (i < MAX && isTransient(lastMsg)) {
+          const delay = 800 * 2 ** (i - 1);
+          toast.message(
+            lang === "ar"
+              ? `فشلت المحاولة ${i}، إعادة المحاولة خلال ${Math.round(delay / 1000)} ثانية...`
+              : `Attempt ${i} failed, retrying in ${Math.round(delay / 1000)}s...`
+          );
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        break;
       }
-    } finally {
-      setRunning(false);
     }
+    setLastError(lastMsg);
+    setRunning(false);
+    setAttempt(0);
   };
+
+  const onRun = () => runIngest({ autoRetry: true });
+  const onRetry = () => runIngest({ autoRetry: true });
 
   return (
     <div className="space-y-6" dir={dir}>
@@ -141,6 +173,35 @@ function ScreeningPage() {
             <Link to="/auth">
               {lang === "ar" ? "تسجيل الدخول" : "Sign in"}
             </Link>
+          </Button>
+        </Card>
+      )}
+
+      {lastError && !authError && (
+        <Card className="glass border-destructive/50 p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <div className="font-medium">
+              {lang === "ar" ? "فشل جلب ملفات Drive" : "Failed to fetch Drive files"}
+            </div>
+            <div className="text-muted-foreground mt-1 break-words">{lastError}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {lang === "ar"
+                ? "تمت إعادة المحاولة تلقائياً. يمكنك المحاولة يدوياً عبر زر إعادة التشغيل."
+                : "We auto-retried. You can run it again manually using the retry button."}
+            </div>
+          </div>
+          <Button size="sm" onClick={onRetry} disabled={running}>
+            {running ? (
+              <>
+                <Loader2 className="me-2 h-3 w-3 animate-spin" />
+                {lang === "ar" ? `محاولة ${attempt}` : `Attempt ${attempt}`}
+              </>
+            ) : lang === "ar" ? (
+              "إعادة التشغيل"
+            ) : (
+              "Retry now"
+            )}
           </Button>
         </Card>
       )}
@@ -254,7 +315,9 @@ function ScreeningPage() {
           {running ? (
             <>
               <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              {lang === "ar" ? "جاري الاستيراد والفرز..." : "Importing & screening..."}
+              {lang === "ar"
+                ? `جاري الاستيراد والفرز...${attempt > 1 ? ` (محاولة ${attempt})` : ""}`
+                : `Importing & screening...${attempt > 1 ? ` (attempt ${attempt})` : ""}`}
             </>
           ) : (
             <>
