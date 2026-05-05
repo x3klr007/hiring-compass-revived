@@ -309,6 +309,76 @@ function JobsPage() {
                 {t("clearFilters")}
               </Button>
             </Card>
+          ) : sortBy !== "default" ? (
+            (() => {
+              const flat = sortedJobs.filter((j) => tab === "all" || j.region === tab);
+              return (
+                <Card className="glass shadow-elegant overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
+                    <h2 className="text-sm font-medium text-muted-foreground">
+                      {t("sortedBy")}: <span className="text-foreground font-semibold">{labelForSort(sortBy, t)}</span>{" "}
+                      {sortDir === "asc" ? "↑" : "↓"}
+                    </h2>
+                    <Badge variant="secondary">
+                      {flat.length} {ar ? "شاغر" : "vacancies"}
+                    </Badge>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground bg-background/40">
+                      <tr>
+                        <th className="px-5 py-2 text-start font-normal w-28">{t("code")}</th>
+                        <th className="px-4 py-2 text-start font-normal">{t("title")}</th>
+                        <th className="px-4 py-2 text-start font-normal w-32">{t("region")}</th>
+                        <th className="px-4 py-2 text-start font-normal w-32">{t("branch")}</th>
+                        <th className="px-4 py-2 text-start font-normal w-24">{ar ? "الأولوية" : "Priority"}</th>
+                        <th className="px-4 py-2 text-end font-normal w-20">{t("headcount")}</th>
+                        <th className="px-4 py-2 text-end font-normal w-20">{t("hired")}</th>
+                        <th className="px-4 py-2 text-end font-normal w-24">{t("remaining")}</th>
+                        <th className="px-4 py-2 text-start font-normal w-24">{t("status")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {flat.map((j) => {
+                        const remaining = Math.max(0, j.headcount - j.hired_count);
+                        return (
+                          <tr
+                            key={j.id}
+                            onClick={() => setSelectedJob(j)}
+                            className="border-t border-border/60 cursor-pointer hover:bg-muted/40 transition-colors"
+                          >
+                            <td className="px-5 py-2 font-mono text-xs">
+                              <Highlight text={j.job_code} match={debouncedSearch} />
+                            </td>
+                            <td className="px-4 py-2">
+                              <Highlight text={j.title} match={debouncedSearch} />
+                            </td>
+                            <td className="px-4 py-2">{j.region}</td>
+                            <td className="px-4 py-2">
+                              <span className="inline-flex items-center gap-1.5">
+                                <BranchIcon branch={j.branch} /> {j.branch}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <Badge variant={j.priority === "High" ? "destructive" : "outline"}>
+                                {j.priority}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-2 text-end tabular-nums">{j.headcount}</td>
+                            <td className="px-4 py-2 text-end tabular-nums">{j.hired_count}</td>
+                            <td className="px-4 py-2 text-end tabular-nums font-medium">{remaining}</td>
+                            <td className="px-4 py-2">
+                              <Badge variant={j.status === "Open" ? "default" : "secondary"}>
+                                {j.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </Card>
+              );
+            })()
           ) : (
             visibleRegions.map((region) => {
               const branches = grouped.byRegion.get(region)!;
