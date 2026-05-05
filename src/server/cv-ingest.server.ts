@@ -347,13 +347,28 @@ function newReqId(prefix = "req") {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+export type RetryMetrics = {
+  attempts: number;
+  totalMs: number;
+  transientHits: number;
+  connErrors: number;
+  attemptDurations: number[]; // ms per fetch call
+  retryDelays: number[];      // ms slept between attempts
+};
+
+function newMetrics(): RetryMetrics {
+  return { attempts: 0, totalMs: 0, transientHits: 0, connErrors: 0, attemptDurations: [], retryDelays: [] };
+}
+
 async function fetchWithRetry(
   url: string,
   init: RequestInit,
   label: string,
   policy: RetryPolicy = DEFAULT_RETRY_POLICY,
   reqId: string = newReqId("fetch"),
+  metrics?: RetryMetrics,
 ): Promise<Response> {
+  const startedAt = Date.now();
   // Circuit breaker short-circuit
   if (shouldShortCircuit()) {
     const snap = breakerSnapshot();
@@ -376,6 +391,7 @@ async function fetchWithRetry(
   let attempt = 0;
   while (true) {
     attempt += 1;
+    if (metrics) metrics.attempts = attempt;
     const t0 = Date.now();
     let connError = false;
     try {
@@ -384,27 +400,34 @@ async function fetchWithRetry(
       );
       const res = await fetch(url, init);
       const dur = Date.now() - t0;
+      if (metrics) metrics.attemptDurations.push(dur);
       lastStatus = res.status;
       if (transientCheck(res.status)) {
+        if (metrics) metrics.transientHits += 1;
         lastBody = await res.clone().text().catch(() => "<unreadable>");
         if (attempt < baseMax) {
           const delay = backoffDelay(attempt, policy.baseDelayMs, policy.factor, policy.maxDelayMs, policy.jitter);
+          if (metrics) metrics.retryDelays.push(delay);
           console.warn(`[${label}][${reqId}] attempt ${attempt} transient ${res.status} in ${dur}ms — retrying in ${delay}ms`);
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }
         recordFailure(`HTTP ${res.status}`);
+        if (metrics) metrics.totalMs = Date.now() - startedAt;
         console.error(`[${label}][${reqId}] FAILED after ${attempt} attempts — HTTP ${res.status}`);
         throw new Error(`${label} last status ${res.status}: ${lastBody?.slice(0, 300) ?? ""}`);
       }
       console.log(`[${label}][${reqId}] attempt ${attempt} done status=${res.status} in ${dur}ms`);
       recordSuccess();
+      if (metrics) metrics.totalMs = Date.now() - startedAt;
       return res;
     } catch (err) {
       const dur = Date.now() - t0;
+      if (metrics) metrics.attemptDurations.push(dur);
       const msg = (err as Error)?.message ?? "unknown";
       lastErr = err;
       connError = isConnectionError(msg);
+      if (metrics && connError) metrics.connErrors += 1;
       console.warn(`[${label}][${reqId}] attempt ${attempt} threw in ${dur}ms (connError=${connError}): ${msg}`);
 
       const allowance =
@@ -420,6 +443,7 @@ async function fetchWithRetry(
               policy.jitter,
             )
           : backoffDelay(attempt, policy.baseDelayMs, policy.factor, policy.maxDelayMs, policy.jitter);
+        if (metrics) metrics.retryDelays.push(delay);
         console.warn(`[${label}][${reqId}] retrying in ${delay}ms (allowance=${allowance})`);
         await new Promise((r) => setTimeout(r, delay));
         continue;
@@ -433,6 +457,7 @@ async function fetchWithRetry(
   console.error(
     `[${label}][${reqId}] FAILED after ${attempt} attempts (connRetries=${connectionRetriesUsed}) — url=${url}, ${reason}`,
   );
+  if (metrics) metrics.totalMs = Date.now() - startedAt;
   recordFailure(reason);
   throw new Error(`${label} ${reason}`);
 }
@@ -488,17 +513,33 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
   const url = `${DRIVE_GATEWAY}/files?q=${q}&fields=files(id,name,mimeType,size)&pageSize=200`;
   const start = Date.now();
+  const metrics = newMetrics();
   console.log(`[listDriveFolder][${reqId}] folderId=${folderId} url=${url}`);
   const fail = (status: number | "n/a", reason: string): never => {
     const totalMs = Date.now() - start;
-    const detail = `LIST_FAILED reqId=${reqId} folderId=${folderId} status=${status} totalMs=${totalMs} url=${url} reason=${reason}`;
+    const m = {
+      attempts: metrics.attempts,
+      transientHits: metrics.transientHits,
+      connErrors: metrics.connErrors,
+      attemptDurations: metrics.attemptDurations,
+      retryDelays: metrics.retryDelays,
+    };
+    const detail = `LIST_FAILED reqId=${reqId} folderId=${folderId} status=${status} totalMs=${totalMs} attempts=${metrics.attempts} url=${url} reason=${reason} metrics=${JSON.stringify(m)}`;
     console.error(`[listDriveFolder][${reqId}] ${detail}`);
-    void persistDriveFailure({ reqId, folderId, url, status, totalMs, reason });
+    void persistDriveFailure({
+      reqId,
+      folderId,
+      url,
+      status,
+      totalMs,
+      attempts: metrics.attempts,
+      reason,
+    });
     throw new Error(detail);
   };
   let res: Response;
   try {
-    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list", DEFAULT_RETRY_POLICY, reqId);
+    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list", DEFAULT_RETRY_POLICY, reqId, metrics);
   } catch (err) {
     return fail("n/a", (err as Error)?.message ?? "unknown");
   }
@@ -507,7 +548,7 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
     return fail(res.status, body.slice(0, 300));
   }
   const json = (await res.json()) as { files?: DriveFile[] };
-  console.log(`[listDriveFolder][${reqId}] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
+  console.log(`[listDriveFolder][${reqId}] ok folderId=${folderId} files=${json.files?.length ?? 0} attempts=${metrics.attempts} totalMs=${Date.now() - start}`);
   return json.files ?? [];
 }
 
