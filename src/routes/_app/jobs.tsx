@@ -661,6 +661,17 @@ function Chip({
   );
 }
 
+function labelForSort(sortBy: string, t: (k: any) => string) {
+  switch (sortBy) {
+    case "priority": return t("priority");
+    case "region": return t("region");
+    case "branch": return t("branch");
+    case "remaining": return t("remainingVacancies");
+    case "hired": return t("hired");
+    default: return t("default");
+  }
+}
+
 function BranchIcon({ branch }: { branch: string }) {
   const emoji =
     branch === "Headquarters" ? "🏛️" : branch === "Girls School" ? "👩‍🏫" : branch === "Boys School" ? "👨‍🏫" : "📍";
