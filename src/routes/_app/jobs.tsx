@@ -452,7 +452,7 @@ function JobsPage() {
                               <tr>
                                 <SortableTh className="px-5 py-2 w-32" sortKey="code" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("code")}</SortableTh>
                                 <SortableTh className="px-4 py-2" sortKey="title" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("title")}</SortableTh>
-                                <SortableTh className="px-4 py-2 w-28" sortKey="priority" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{ar ? "الأولوية" : "Priority"}</SortableTh>
+                                
                                 <SortableTh className="px-4 py-2 w-24" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("headcount")}</SortableTh>
                                 <SortableTh className="px-4 py-2 w-24" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("hired")}</SortableTh>
                                 <SortableTh className="px-4 py-2 w-24" sortKey="status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("status")}</SortableTh>
