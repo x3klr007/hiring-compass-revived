@@ -44,11 +44,12 @@ function ScreeningPage() {
     setRunning(true);
     setResults([]);
     setSummary(null);
+    setAuthError(false);
     try {
       const { data: sess } = await supabase.auth.getSession();
       const token = sess.session?.access_token;
       if (!token) {
-        toast.error(lang === "ar" ? "يرجى تسجيل الدخول" : "Please sign in");
+        setAuthError(true);
         setRunning(false);
         return;
       }
@@ -69,7 +70,12 @@ function ScreeningPage() {
           : `Imported ${ok} of ${res.total} candidates`
       );
     } catch (err) {
-      toast.error((err as Error).message);
+      const msg = (err as Error).message || "";
+      if (/401|unauthor|jwt|token|sign(\s|-)?in/i.test(msg)) {
+        setAuthError(true);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setRunning(false);
     }
