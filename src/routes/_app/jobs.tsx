@@ -95,8 +95,13 @@ function JobsPage() {
     });
 
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [sortBy, setSortBy] = useState<"default" | "priority" | "region" | "branch" | "remaining" | "hired">("default");
+  type SortKey = "default" | "priority" | "region" | "branch" | "remaining" | "hired" | "code" | "title" | "status";
+  const [sortBy, setSortBy] = useState<SortKey>("default");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const toggleSort = (key: Exclude<SortKey, "default">) => {
+    if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortBy(key); setSortDir("asc"); }
+  };
 
   useEffect(() => {
     const trimmed = search.trim();
@@ -155,6 +160,9 @@ function JobsPage() {
         case "branch": return branchRank(j.branch);
         case "remaining": return Math.max(0, j.headcount - j.hired_count);
         case "hired": return j.hired_count;
+        case "code": return j.job_code;
+        case "title": return j.title.toLowerCase();
+        case "status": return j.status;
         default: return 0;
       }
     };
@@ -377,15 +385,15 @@ function JobsPage() {
                   <table className="w-full text-sm">
                     <thead className="text-xs text-muted-foreground bg-background/40">
                       <tr>
-                        <th className="px-5 py-2 text-start font-normal w-28">{t("code")}</th>
-                        <th className="px-4 py-2 text-start font-normal">{t("title")}</th>
-                        <th className="px-4 py-2 text-start font-normal w-32">{t("region")}</th>
-                        <th className="px-4 py-2 text-start font-normal w-32">{t("branch")}</th>
-                        <th className="px-4 py-2 text-start font-normal w-24">{ar ? "الأولوية" : "Priority"}</th>
-                        <th className="px-4 py-2 text-end font-normal w-20">{t("headcount")}</th>
-                        <th className="px-4 py-2 text-end font-normal w-20">{t("hired")}</th>
-                        <th className="px-4 py-2 text-end font-normal w-24">{t("remaining")}</th>
-                        <th className="px-4 py-2 text-start font-normal w-24">{t("status")}</th>
+                        <SortableTh className="px-5 py-2 w-28" sortKey="code" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("code")}</SortableTh>
+                        <SortableTh className="px-4 py-2" sortKey="title" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("title")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-32" sortKey="region" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("region")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-32" sortKey="branch" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("branch")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-24" sortKey="priority" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{ar ? "الأولوية" : "Priority"}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-20" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("headcount")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-20" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("hired")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-24" sortKey="remaining" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("remaining")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-24" sortKey="status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("status")}</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
@@ -460,12 +468,12 @@ function JobsPage() {
                           <table className="w-full text-sm">
                             <thead className="text-xs text-muted-foreground">
                               <tr>
-                                <th className="px-5 py-2 text-start font-normal w-32">{t("code")}</th>
-                                <th className="px-4 py-2 text-start font-normal">{t("title")}</th>
-                                <th className="px-4 py-2 text-start font-normal w-28">{ar ? "الأولوية" : "Priority"}</th>
-                                <th className="px-4 py-2 text-start font-normal w-24">{t("headcount")}</th>
-                                <th className="px-4 py-2 text-start font-normal w-24">{t("hired")}</th>
-                                <th className="px-4 py-2 text-start font-normal w-24">{t("status")}</th>
+                                <SortableTh className="px-5 py-2 w-32" sortKey="code" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("code")}</SortableTh>
+                                <SortableTh className="px-4 py-2" sortKey="title" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("title")}</SortableTh>
+                                <SortableTh className="px-4 py-2 w-28" sortKey="priority" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{ar ? "الأولوية" : "Priority"}</SortableTh>
+                                <SortableTh className="px-4 py-2 w-24" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("headcount")}</SortableTh>
+                                <SortableTh className="px-4 py-2 w-24" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("hired")}</SortableTh>
+                                <SortableTh className="px-4 py-2 w-24" sortKey="status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("status")}</SortableTh>
                               </tr>
                             </thead>
                             <tbody>
@@ -719,6 +727,9 @@ function labelForSort(sortBy: string, t: (k: any) => string) {
     case "branch": return t("branch");
     case "remaining": return t("remainingVacancies");
     case "hired": return t("hired");
+    case "code": return t("code");
+    case "title": return t("title");
+    case "status": return t("status");
     default: return t("default");
   }
 }
@@ -741,5 +752,41 @@ function Highlight({ text, match }: { text: string; match: string }) {
       </mark>
       {text.slice(idx + match.length)}
     </>
+  );
+}
+
+function SortableTh({
+  children,
+  sortKey,
+  sortBy,
+  sortDir,
+  onSort,
+  className = "",
+  align = "start",
+}: {
+  children: React.ReactNode;
+  sortKey: string;
+  sortBy: string;
+  sortDir: "asc" | "desc";
+  onSort: (k: any) => void;
+  className?: string;
+  align?: "start" | "end";
+}) {
+  const active = sortBy === sortKey;
+  return (
+    <th className={`text-${align} font-normal ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${
+          active ? "text-foreground font-medium" : ""
+        } ${align === "end" ? "ms-auto" : ""}`}
+      >
+        {children}
+        <span className="text-[10px] opacity-70 w-2 inline-block">
+          {active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
+        </span>
+      </button>
+    </th>
   );
 }
