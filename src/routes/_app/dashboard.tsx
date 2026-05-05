@@ -1,14 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Users, MapPin, Building2, TrendingUp, X, Download } from "lucide-react";
+import { Briefcase, Users, MapPin, Building2, TrendingUp, X, Download, Settings2, CheckCircle2, Clock, Target } from "lucide-react";
 import { exportDashboardPdf } from "@/lib/exportDashboardPdf";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -115,29 +118,97 @@ function Dashboard() {
     ? Math.round((stats.totalHired / stats.totalHeadcount) * 100)
     : 0;
 
-  const kpis = [
-    {
-      label: ar ? "إجمالي الشواغر" : t("activeJobs"),
-      value: stats.totalHeadcount,
-      icon: Briefcase,
-      sub: `${stats.open} ${ar ? "مفتوح" : "open"}`,
-      tone: "primary",
-    },
-    {
-      label: ar ? "المرشحون" : t("totalCandidates"),
-      value: 0,
-      icon: Users,
-      sub: ar ? "لا يوجد بعد" : "none yet",
-      tone: "accent",
-    },
-    {
-      label: ar ? "المناطق" : "Regions",
-      value: stats.regions,
-      icon: MapPin,
-      sub: `${stats.branches} ${ar ? "فرعاً" : "branches"}`,
-      tone: "success",
-    },
-  ];
+  const ALL_KPIS = useMemo(
+    () => [
+      {
+        id: "headcount",
+        label: ar ? "إجمالي الشواغر" : t("activeJobs"),
+        value: stats.totalHeadcount,
+        icon: Briefcase,
+        sub: `${stats.open} ${ar ? "مفتوح" : "open"}`,
+        tone: "primary",
+      },
+      {
+        id: "candidates",
+        label: ar ? "المرشحون" : t("totalCandidates"),
+        value: 0,
+        icon: Users,
+        sub: ar ? "لا يوجد بعد" : "none yet",
+        tone: "accent",
+      },
+      {
+        id: "regions",
+        label: ar ? "المناطق" : "Regions",
+        value: stats.regions,
+        icon: MapPin,
+        sub: `${stats.branches} ${ar ? "فرعاً" : "branches"}`,
+        tone: "success",
+      },
+      {
+        id: "open",
+        label: ar ? "وظائف مفتوحة" : "Open Jobs",
+        value: stats.open,
+        icon: Clock,
+        sub: ar ? "قيد التوظيف" : "in progress",
+        tone: "warning",
+      },
+      {
+        id: "hired",
+        label: ar ? "تم التوظيف" : "Hired",
+        value: stats.totalHired,
+        icon: CheckCircle2,
+        sub: `${stats.totalHeadcount - stats.totalHired} ${ar ? "متبقي" : "remaining"}`,
+        tone: "success",
+      },
+      {
+        id: "branches",
+        label: ar ? "الفروع" : "Branches",
+        value: stats.branches,
+        icon: Building2,
+        sub: `${stats.regions} ${ar ? "منطقة" : "regions"}`,
+        tone: "primary",
+      },
+      {
+        id: "fillRate",
+        label: ar ? "معدل الملء" : "Fill Rate",
+        value: `${stats.totalHeadcount ? Math.round((stats.totalHired / stats.totalHeadcount) * 100) : 0}%`,
+        icon: Target,
+        sub: `${stats.totalHired}/${stats.totalHeadcount}`,
+        tone: "accent",
+      },
+    ],
+    [ar, t, stats],
+  );
+
+  const STORAGE_KEY = "dashboard-kpi-selection";
+  const DEFAULT_IDS = ["headcount", "candidates", "regions"];
+  const [selectedKpiIds, setSelectedKpiIds] = useState<string[]>(DEFAULT_IDS);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) setSelectedKpiIds(parsed);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleKpi = (id: string) => {
+    setSelectedKpiIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const kpis = ALL_KPIS.filter((k) => selectedKpiIds.includes(k.id));
 
   return (
     <div className="space-y-6">
@@ -188,6 +259,34 @@ function Dashboard() {
               {ar ? "مسح" : "Clear"}
             </Button>
           )}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings2 className="h-4 w-4 mr-1" />
+                {ar ? "تخصيص" : "Customize"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64">
+              <div className="text-sm font-medium mb-2">
+                {ar ? "اختر البطاقات" : "Visible KPI cards"}
+              </div>
+              <div className="space-y-2">
+                {ALL_KPIS.map((k) => (
+                  <label
+                    key={k.id}
+                    className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
+                  >
+                    <Checkbox
+                      checked={selectedKpiIds.includes(k.id)}
+                      onCheckedChange={() => toggleKpi(k.id)}
+                    />
+                    <k.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>{k.label}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button
             size="sm"
             onClick={() =>
