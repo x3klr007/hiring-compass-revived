@@ -20,7 +20,6 @@ const HEADERS = [
   ["Hired", "تم التعيين"],
   ["Remaining", "المتبقي"],
   ["Status", "الحالة"],
-  ["Priority", "الأولوية"],
 ];
 
 const escape = (v: unknown) => {
