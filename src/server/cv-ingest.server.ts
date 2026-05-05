@@ -41,17 +41,43 @@ function shouldShortCircuit(): boolean {
   return true;
 }
 
-function parseStatusList(raw: string | undefined, fallback: number[]): number[] {
+// ---------- Retry env validation ----------
+type EnvIssue = { name: string; raw: string; reason: string };
+const RETRY_ENV_ISSUES: EnvIssue[] = [];
+
+function parseStatusList(
+  name: string,
+  raw: string | undefined,
+  fallback: number[],
+): number[] {
   if (!raw) return fallback;
-  const out = raw
-    .split(/[,\s]+/)
-    .map((s) => parseInt(s.trim(), 10))
-    .filter((n) => Number.isFinite(n) && n >= 100 && n <= 599);
+  const parts = raw.split(/[,\s]+/).filter(Boolean);
+  const bad: string[] = [];
+  const out: number[] = [];
+  for (const p of parts) {
+    const n = parseInt(p, 10);
+    if (!Number.isFinite(n) || n < 100 || n > 599 || String(n) !== p.trim()) {
+      bad.push(p);
+    } else {
+      out.push(n);
+    }
+  }
+  if (bad.length) {
+    RETRY_ENV_ISSUES.push({
+      name,
+      raw,
+      reason: `قيم غير صالحة (يجب أن تكون أرقام HTTP بين 100-599): ${bad.join(", ")}`,
+    });
+  }
   return out.length ? out : fallback;
 }
 
 const TRANSIENT_STATUSES = new Set<number>(
-  parseStatusList(process.env.DRIVE_RETRY_TRANSIENT_STATUSES, [408, 425, 429, 500, 502, 503, 504]),
+  parseStatusList(
+    "DRIVE_RETRY_TRANSIENT_STATUSES",
+    process.env.DRIVE_RETRY_TRANSIENT_STATUSES,
+    [408, 425, 429, 500, 502, 503, 504],
+  ),
 );
 
 function isTransientStatus(status: number) {
