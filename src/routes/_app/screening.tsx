@@ -13,6 +13,20 @@ import { ingestFromDriveLink, checkDriveHealth, type IngestResult } from "@/serv
 import { REGIONS, regionLabel } from "@/lib/regions";
 import { toast } from "sonner";
 
+function parseDriveLinkClient(input: string): { kind: "folder" | "file"; id: string } | null {
+  if (!input) return null;
+  let s = input.trim().replace(/^["'<\s]+|["'>\s]+$/g, "");
+  try { s = decodeURI(s); } catch { /* noop */ }
+  const folder = s.match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
+  if (folder) return { kind: "folder", id: folder[1] };
+  const file = s.match(/\/(?:file|document|spreadsheets|presentation)\/d\/([a-zA-Z0-9_-]{10,})/);
+  if (file) return { kind: "file", id: file[1] };
+  const open = s.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if (open) return { kind: /folder/i.test(s) ? "folder" : "file", id: open[1] };
+  if (/^[a-zA-Z0-9_-]{16,}$/.test(s)) return { kind: "folder", id: s };
+  return null;
+}
+
 type Job = { id: string; title: string; region: string };
 
 function ScreeningPage() {
