@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Briefcase, Users, MapPin, Building2, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Briefcase, Users, MapPin, Building2, TrendingUp, X } from "lucide-react";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -47,16 +49,47 @@ function Dashboard() {
     },
   });
 
+  const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+
+  const availableRegions = useMemo(
+    () => Array.from(new Set(jobs.map((j) => j.region))).filter(Boolean).sort(),
+    [jobs],
+  );
+  const availableBranches = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          jobs
+            .filter((j) => regionFilter === "all" || j.region === regionFilter)
+            .map((j) => j.branch),
+        ),
+      )
+        .filter(Boolean)
+        .sort(),
+    [jobs, regionFilter],
+  );
+
+  const filteredJobs = useMemo(
+    () =>
+      jobs.filter(
+        (j) =>
+          (regionFilter === "all" || j.region === regionFilter) &&
+          (branchFilter === "all" || j.branch === branchFilter),
+      ),
+    [jobs, regionFilter, branchFilter],
+  );
+
   const stats = useMemo(() => {
-    const totalHeadcount = jobs.reduce((a, j) => a + (j.headcount || 0), 0);
-    const totalHired = jobs.reduce((a, j) => a + (j.hired_count || 0), 0);
-    const open = jobs.filter((j) => j.status === "Open").length;
-    const regions = new Set(jobs.map((j) => j.region)).size;
-    const branches = new Set(jobs.map((j) => `${j.region}|${j.branch}`)).size;
+    const totalHeadcount = filteredJobs.reduce((a, j) => a + (j.headcount || 0), 0);
+    const totalHired = filteredJobs.reduce((a, j) => a + (j.hired_count || 0), 0);
+    const open = filteredJobs.filter((j) => j.status === "Open").length;
+    const regions = new Set(filteredJobs.map((j) => j.region)).size;
+    const branches = new Set(filteredJobs.map((j) => `${j.region}|${j.branch}`)).size;
 
     const byRegion = REGION_ORDER
       .map((r) => {
-        const list = jobs.filter((j) => j.region === r);
+        const list = filteredJobs.filter((j) => j.region === r);
         return {
           region: r,
           total: list.reduce((a, j) => a + j.headcount, 0),
@@ -66,14 +99,16 @@ function Dashboard() {
       .filter((r) => r.total > 0);
 
     const byRole = Object.entries(
-      jobs.reduce<Record<string, number>>((acc, j) => {
+      filteredJobs.reduce<Record<string, number>>((acc, j) => {
         acc[j.title] = (acc[j.title] || 0) + j.headcount;
         return acc;
       }, {}),
     ).sort((a, b) => b[1] - a[1]);
 
     return { totalHeadcount, totalHired, open, regions, branches, byRegion, byRole };
-  }, [jobs]);
+  }, [filteredJobs]);
+
+  const hasFilters = regionFilter !== "all" || branchFilter !== "all";
 
   const fillRate = stats.totalHeadcount
     ? Math.round((stats.totalHired / stats.totalHeadcount) * 100)
