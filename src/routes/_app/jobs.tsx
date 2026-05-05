@@ -196,7 +196,7 @@ function JobsPage() {
     tab === "all" ? grouped.regions : grouped.regions.filter((r) => r === tab);
 
   const activeFilters =
-    (debouncedSearch ? 1 : 0) + statuses.size + priorities.size;
+    (debouncedSearch ? 1 : 0) + statuses.size;
 
   const toggle = (set: Set<string>, val: string, setter: (s: Set<string>) => void) => {
     const next = new Set(set);
@@ -208,7 +208,6 @@ function JobsPage() {
   const clearAll = () => {
     setSearch("");
     setStatuses(new Set());
-    setPriorities(new Set());
   };
 
   return (
