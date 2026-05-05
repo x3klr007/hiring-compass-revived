@@ -112,7 +112,7 @@ function JobsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("jobs")
-        .select("*")
+        .select("id,job_code,title,region,branch,headcount,hired_count,status,description,opened_at,target_fill_date,created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Job[];
