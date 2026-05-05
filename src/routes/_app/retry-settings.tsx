@@ -25,6 +25,7 @@ type Snapshot = {
   policy: Policy;
   transientStatuses: number[];
   envVars: Record<string, string | null>;
+  issues: { name: string; raw: string; reason: string }[];
 };
 
 const FIELDS: Array<{
@@ -121,6 +122,21 @@ function RetrySettingsPage() {
         </p>
       </div>
 
+      {snapshot.issues.length > 0 && (
+        <Card className="border-destructive/40 bg-destructive/5 p-4 space-y-2">
+          <div className="font-semibold text-destructive flex items-center gap-2">
+            ⚠️ {ar ? "مشاكل في متغيرات البيئة" : "Environment variable issues"}
+            <Badge variant="destructive">{snapshot.issues.length}</Badge>
+          </div>
+          <ul className="text-sm space-y-1">
+            {snapshot.issues.map((i, idx) => (
+              <li key={idx} className="font-mono text-xs">
+                <span className="font-bold">{i.name}</span>="{i.raw}" — <span className="font-sans">{i.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       <Card className="glass shadow-elegant p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="font-semibold">{ar ? "الإعدادات الحالية" : "Current settings"}</div>
