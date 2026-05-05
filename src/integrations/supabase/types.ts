@@ -201,6 +201,48 @@ export type Database = {
           },
         ]
       }
+      drive_failure_logs: {
+        Row: {
+          actor_id: string | null
+          attempts: number | null
+          created_at: string
+          folder_id: string | null
+          id: string
+          reason: string | null
+          req_id: string | null
+          status: string | null
+          suggestion: string | null
+          total_ms: number | null
+          url: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          attempts?: number | null
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          reason?: string | null
+          req_id?: string | null
+          status?: string | null
+          suggestion?: string | null
+          total_ms?: number | null
+          url?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          attempts?: number | null
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          reason?: string | null
+          req_id?: string | null
+          status?: string | null
+          suggestion?: string | null
+          total_ms?: number | null
+          url?: string | null
+        }
+        Relationships: []
+      }
       interview_schedule: {
         Row: {
           candidate_id: string | null
