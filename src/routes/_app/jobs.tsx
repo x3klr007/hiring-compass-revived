@@ -768,32 +768,28 @@ function SortableTh({
 }
 
 function EmptyMatches({
-  ar, allJobs, search, statuses, priorities, region,
-  onClearAll, onClearSearch, onClearStatuses, onClearPriorities, onClearRegion, onPickJob,
+  ar, allJobs, search, statuses, region,
+  onClearAll, onClearSearch, onClearStatuses, onClearRegion, onPickJob,
 }: {
   ar: boolean;
   allJobs: Job[];
   search: string;
   statuses: Set<string>;
-  priorities: Set<string>;
   region: string;
   onClearAll: () => void;
   onClearSearch: () => void;
   onClearStatuses: () => void;
-  onClearPriorities: () => void;
   onClearRegion: () => void;
   onPickJob: (j: Job) => void;
 }) {
   const active: { label: string; value: string; clear: () => void }[] = [];
   if (search) active.push({ label: ar ? "بحث" : "Search", value: `"${search}"`, clear: onClearSearch });
   if (statuses.size) active.push({ label: ar ? "الحالة" : "Status", value: [...statuses].join(", "), clear: onClearStatuses });
-  if (priorities.size) active.push({ label: ar ? "الأولوية" : "Priority", value: [...priorities].join(", "), clear: onClearPriorities });
   if (region !== "all") active.push({ label: ar ? "المنطقة" : "Region", value: region, clear: onClearRegion });
 
   // Build alternative suggestions by relaxing one filter at a time
   const matchExceptSearch = (j: Job) =>
     (!statuses.size || statuses.has(j.status)) &&
-    (!priorities.size || priorities.has(j.priority)) &&
     (region === "all" || j.region === region);
 
   const suggestions: { label: string; jobs: Job[]; apply: () => void }[] = [];
@@ -808,7 +804,6 @@ function EmptyMatches({
   if (region !== "all") {
     const drop = allJobs.filter((j) =>
       (!statuses.size || statuses.has(j.status)) &&
-      (!priorities.size || priorities.has(j.priority)) &&
       (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
     ).slice(0, 5);
     if (drop.length) suggestions.push({
@@ -818,24 +813,12 @@ function EmptyMatches({
   }
   if (statuses.size) {
     const drop = allJobs.filter((j) =>
-      (!priorities.size || priorities.has(j.priority)) &&
       (region === "all" || j.region === region) &&
       (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
     ).slice(0, 5);
     if (drop.length) suggestions.push({
       label: ar ? "تجاهل فلتر الحالة" : "Ignore status filter",
       jobs: drop, apply: onClearStatuses,
-    });
-  }
-  if (priorities.size) {
-    const drop = allJobs.filter((j) =>
-      (!statuses.size || statuses.has(j.status)) &&
-      (region === "all" || j.region === region) &&
-      (!search || `${j.title} ${j.job_code}`.toLowerCase().includes(search))
-    ).slice(0, 5);
-    if (drop.length) suggestions.push({
-      label: ar ? "تجاهل فلتر الأولوية" : "Ignore priority filter",
-      jobs: drop, apply: onClearPriorities,
     });
   }
 
