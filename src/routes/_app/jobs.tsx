@@ -315,18 +315,6 @@ function JobsPage() {
               </Chip>
             ))}
           </FilterGroup>
-          <FilterGroup label={t("priority")}>
-            {PRIORITY_OPTIONS.map((p) => (
-              <Chip
-                key={p}
-                active={priorities.has(p)}
-                onClick={() => toggle(priorities, p, setPriorities)}
-                tone={p === "High" ? "destructive" : "default"}
-              >
-                {p}
-              </Chip>
-            ))}
-          </FilterGroup>
         </div>
       </Card>
 
