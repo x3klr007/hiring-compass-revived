@@ -31,20 +31,24 @@ function PipelinePage() {
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [region, setRegion] = useState<string>("");
   const [dragId, setDragId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Candidate | null>(null);
+  const [dialogTab, setDialogTab] = useState<"evaluate" | "message">("evaluate");
+
+  const reload = async () => {
+    const [{ data: s }, { data: c }, { data: j }] = await Promise.all([
+      supabase.from("pipeline_stages").select("*").order("display_order"),
+      supabase.from("candidates").select("id,full_name,email,phone,stage,score,gender,job_id"),
+      supabase.from("jobs").select("id,region"),
+    ]);
+    setStages((s ?? []) as Stage[]);
+    setCandidates((c ?? []) as Candidate[]);
+    const map: Record<string, Job> = {};
+    (j ?? []).forEach((x) => (map[x.id] = x as Job));
+    setJobs(map);
+  };
 
   useEffect(() => {
-    (async () => {
-      const [{ data: s }, { data: c }, { data: j }] = await Promise.all([
-        supabase.from("pipeline_stages").select("*").order("display_order"),
-        supabase.from("candidates").select("id,full_name,stage,score,gender,job_id"),
-        supabase.from("jobs").select("id,region"),
-      ]);
-      setStages((s ?? []) as Stage[]);
-      setCandidates((c ?? []) as Candidate[]);
-      const map: Record<string, Job> = {};
-      (j ?? []).forEach((x) => (map[x.id] = x as Job));
-      setJobs(map);
-    })();
+    void reload();
   }, []);
 
   const visible = useMemo(() => {
