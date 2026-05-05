@@ -385,15 +385,15 @@ function JobsPage() {
                   <table className="w-full text-sm">
                     <thead className="text-xs text-muted-foreground bg-background/40">
                       <tr>
-                        <th className="px-5 py-2 text-start font-normal w-28">{t("code")}</th>
-                        <th className="px-4 py-2 text-start font-normal">{t("title")}</th>
-                        <th className="px-4 py-2 text-start font-normal w-32">{t("region")}</th>
-                        <th className="px-4 py-2 text-start font-normal w-32">{t("branch")}</th>
-                        <th className="px-4 py-2 text-start font-normal w-24">{ar ? "الأولوية" : "Priority"}</th>
-                        <th className="px-4 py-2 text-end font-normal w-20">{t("headcount")}</th>
-                        <th className="px-4 py-2 text-end font-normal w-20">{t("hired")}</th>
-                        <th className="px-4 py-2 text-end font-normal w-24">{t("remaining")}</th>
-                        <th className="px-4 py-2 text-start font-normal w-24">{t("status")}</th>
+                        <SortableTh className="px-5 py-2 w-28" sortKey="code" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("code")}</SortableTh>
+                        <SortableTh className="px-4 py-2" sortKey="title" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("title")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-32" sortKey="region" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("region")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-32" sortKey="branch" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("branch")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-24" sortKey="priority" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{ar ? "الأولوية" : "Priority"}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-20" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("headcount")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-20" sortKey="hired" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("hired")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-24" sortKey="remaining" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} align="end">{t("remaining")}</SortableTh>
+                        <SortableTh className="px-4 py-2 w-24" sortKey="status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>{t("status")}</SortableTh>
                       </tr>
                     </thead>
                     <tbody>
