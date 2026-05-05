@@ -145,6 +145,50 @@ function ScreeningPage() {
         </Card>
       )}
 
+      {driveHealth && (
+        <Card
+          className={`glass p-3 flex items-center gap-3 text-sm ${
+            driveHealth.ok ? "border-emerald-500/40" : "border-destructive/50"
+          }`}
+        >
+          {driveHealth.ok ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+          )}
+          <div className="flex-1">
+            {driveHealth.ok ? (
+              <span className="text-muted-foreground">
+                {lang === "ar"
+                  ? `خدمة Google Drive متاحة (${driveHealth.latencyMs}ms)`
+                  : `Google Drive service is available (${driveHealth.latencyMs}ms)`}
+              </span>
+            ) : (
+              <div>
+                <div className="font-medium">
+                  {lang === "ar"
+                    ? "خدمة Google Drive غير متوفرة حالياً"
+                    : "Google Drive service is unavailable"}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {driveHealth.status ? `HTTP ${driveHealth.status} — ` : ""}
+                  {driveHealth.error}
+                </div>
+              </div>
+            )}
+          </div>
+          <Button size="sm" variant="outline" onClick={runHealthCheck} disabled={healthChecking}>
+            {healthChecking ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : lang === "ar" ? (
+              "إعادة الفحص"
+            ) : (
+              "Recheck"
+            )}
+          </Button>
+        </Card>
+      )}
+
       <Card className="glass shadow-elegant p-6 space-y-4">
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
