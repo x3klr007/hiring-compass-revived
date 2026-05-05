@@ -754,3 +754,39 @@ function Highlight({ text, match }: { text: string; match: string }) {
     </>
   );
 }
+
+function SortableTh({
+  children,
+  sortKey,
+  sortBy,
+  sortDir,
+  onSort,
+  className = "",
+  align = "start",
+}: {
+  children: React.ReactNode;
+  sortKey: string;
+  sortBy: string;
+  sortDir: "asc" | "desc";
+  onSort: (k: any) => void;
+  className?: string;
+  align?: "start" | "end";
+}) {
+  const active = sortBy === sortKey;
+  return (
+    <th className={`text-${align} font-normal ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${
+          active ? "text-foreground font-medium" : ""
+        } ${align === "end" ? "ms-auto" : ""}`}
+      >
+        {children}
+        <span className="text-[10px] opacity-70 w-2 inline-block">
+          {active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
+}
