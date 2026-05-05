@@ -513,17 +513,33 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
   const url = `${DRIVE_GATEWAY}/files?q=${q}&fields=files(id,name,mimeType,size)&pageSize=200`;
   const start = Date.now();
+  const metrics = newMetrics();
   console.log(`[listDriveFolder][${reqId}] folderId=${folderId} url=${url}`);
   const fail = (status: number | "n/a", reason: string): never => {
     const totalMs = Date.now() - start;
-    const detail = `LIST_FAILED reqId=${reqId} folderId=${folderId} status=${status} totalMs=${totalMs} url=${url} reason=${reason}`;
+    const m = {
+      attempts: metrics.attempts,
+      transientHits: metrics.transientHits,
+      connErrors: metrics.connErrors,
+      attemptDurations: metrics.attemptDurations,
+      retryDelays: metrics.retryDelays,
+    };
+    const detail = `LIST_FAILED reqId=${reqId} folderId=${folderId} status=${status} totalMs=${totalMs} attempts=${metrics.attempts} url=${url} reason=${reason} metrics=${JSON.stringify(m)}`;
     console.error(`[listDriveFolder][${reqId}] ${detail}`);
-    void persistDriveFailure({ reqId, folderId, url, status, totalMs, reason });
+    void persistDriveFailure({
+      reqId,
+      folderId,
+      url,
+      status,
+      totalMs,
+      attempts: metrics.attempts,
+      reason,
+    });
     throw new Error(detail);
   };
   let res: Response;
   try {
-    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list", DEFAULT_RETRY_POLICY, reqId);
+    res = await fetchWithRetry(url, { headers: driveHeaders() }, "Drive list", DEFAULT_RETRY_POLICY, reqId, metrics);
   } catch (err) {
     return fail("n/a", (err as Error)?.message ?? "unknown");
   }
@@ -532,7 +548,7 @@ export async function listDriveFolder(folderId: string): Promise<DriveFile[]> {
     return fail(res.status, body.slice(0, 300));
   }
   const json = (await res.json()) as { files?: DriveFile[] };
-  console.log(`[listDriveFolder][${reqId}] ok folderId=${folderId} files=${json.files?.length ?? 0} totalMs=${Date.now() - start}`);
+  console.log(`[listDriveFolder][${reqId}] ok folderId=${folderId} files=${json.files?.length ?? 0} attempts=${metrics.attempts} totalMs=${Date.now() - start}`);
   return json.files ?? [];
 }
 
