@@ -44,7 +44,15 @@ function ScreeningPage() {
     setResults([]);
     setSummary(null);
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) {
+        toast.error(lang === "ar" ? "يرجى تسجيل الدخول" : "Please sign in");
+        setRunning(false);
+        return;
+      }
       const res = await ingest({
+        headers: { Authorization: `Bearer ${token}` },
         data: {
           link: link.trim(),
           defaultJobId: defaultJobId || null,
