@@ -13,8 +13,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppScreeningRouteImport } from './routes/_app/screening'
+import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
 import { Route as AppJobsRouteImport } from './routes/_app/jobs'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppCandidatesRouteImport } from './routes/_app/candidates'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -35,6 +37,11 @@ const AppScreeningRoute = AppScreeningRouteImport.update({
   path: '/screening',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPipelineRoute = AppPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppJobsRoute = AppJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -45,19 +52,28 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCandidatesRoute = AppCandidatesRouteImport.update({
+  id: '/candidates',
+  path: '/candidates',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/candidates': typeof AppCandidatesRoute
   '/dashboard': typeof AppDashboardRoute
   '/jobs': typeof AppJobsRoute
+  '/pipeline': typeof AppPipelineRoute
   '/screening': typeof AppScreeningRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/candidates': typeof AppCandidatesRoute
   '/dashboard': typeof AppDashboardRoute
   '/jobs': typeof AppJobsRoute
+  '/pipeline': typeof AppPipelineRoute
   '/screening': typeof AppScreeningRoute
 }
 export interface FileRoutesById {
@@ -65,22 +81,40 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/candidates': typeof AppCandidatesRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/jobs': typeof AppJobsRoute
+  '/_app/pipeline': typeof AppPipelineRoute
   '/_app/screening': typeof AppScreeningRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/jobs' | '/screening'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/candidates'
+    | '/dashboard'
+    | '/jobs'
+    | '/pipeline'
+    | '/screening'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/jobs' | '/screening'
+  to:
+    | '/'
+    | '/auth'
+    | '/candidates'
+    | '/dashboard'
+    | '/jobs'
+    | '/pipeline'
+    | '/screening'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/auth'
+    | '/_app/candidates'
     | '/_app/dashboard'
     | '/_app/jobs'
+    | '/_app/pipeline'
     | '/_app/screening'
   fileRoutesById: FileRoutesById
 }
@@ -120,6 +154,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppScreeningRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/pipeline': {
+      id: '/_app/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AppPipelineRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/jobs': {
       id: '/_app/jobs'
       path: '/jobs'
@@ -134,18 +175,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/candidates': {
+      id: '/_app/candidates'
+      path: '/candidates'
+      fullPath: '/candidates'
+      preLoaderRoute: typeof AppCandidatesRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppCandidatesRoute: typeof AppCandidatesRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppJobsRoute: typeof AppJobsRoute
+  AppPipelineRoute: typeof AppPipelineRoute
   AppScreeningRoute: typeof AppScreeningRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCandidatesRoute: AppCandidatesRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppJobsRoute: AppJobsRoute,
+  AppPipelineRoute: AppPipelineRoute,
   AppScreeningRoute: AppScreeningRoute,
 }
 
