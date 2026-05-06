@@ -870,6 +870,29 @@ function EmptyMatches({
             ? "لم نعثر على نتائج تطابق الفلاتر الحالية. جرّب تعديلها أو استخدم أحد الاقتراحات أدناه."
             : "No results match the current filters. Try adjusting them or use one of the suggestions below."}
         </p>
+        {search && (
+          <div className="mt-3 text-xs text-muted-foreground bg-muted/40 border border-border rounded-md inline-block px-3 py-2">
+            {ar ? (
+              <>
+                💡 تلميح: ابحث بالمسمّى المترجم مثل{" "}
+                <span className="font-medium text-foreground">"مدرب خبير"</span>،{" "}
+                <span className="font-medium text-foreground">"مدرب مراحل"</span>،{" "}
+                <span className="font-medium text-foreground">"مشرف إداري"</span> أو{" "}
+                <span className="font-medium text-foreground">"الإدارة الرئيسية"</span> — أو بالإنجليزية مثل{" "}
+                <span className="font-medium text-foreground">"Expert Trainer"</span>.
+              </>
+            ) : (
+              <>
+                💡 Tip: try the translated label such as{" "}
+                <span className="font-medium text-foreground">"Expert Trainer"</span>,{" "}
+                <span className="font-medium text-foreground">"Trainer"</span>,{" "}
+                <span className="font-medium text-foreground">"Admin Supervisor"</span> or{" "}
+                <span className="font-medium text-foreground">"Head Office"</span> — or the Arabic equivalent like{" "}
+                <span className="font-medium text-foreground">"مدرب خبير"</span>.
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {active.length > 0 && (
