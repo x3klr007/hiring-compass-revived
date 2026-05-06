@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Users, MapPin, Building2, TrendingUp, X, Download, Settings2, CheckCircle2, Clock, Target } from "lucide-react";
+import { Briefcase, Users, MapPin, Building2, TrendingUp, X, Download, Settings2, CheckCircle2, Clock, Target, UserCheck } from "lucide-react";
 import { exportDashboardPdf } from "@/lib/exportDashboardPdf";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -54,6 +54,15 @@ function Dashboard() {
     },
   });
 
+  const { data: candidates = [] } = useQuery({
+    queryKey: ["candidates", "dashboard"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("candidates").select("id,stage,job_id");
+      if (error) throw error;
+      return data as { id: string; stage: string; job_id: string | null }[];
+    },
+  });
+
   const [regionFilter, setRegionFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
 
@@ -86,11 +95,26 @@ function Dashboard() {
   );
 
   const stats = useMemo(() => {
+    const filteredJobIds = new Set(filteredJobs.map((j) => j.id));
+    const scopedCandidates = candidates.filter(
+      (c) => !c.job_id || filteredJobIds.has(c.job_id),
+    );
+    const hiredCandidates = scopedCandidates.filter((c) => c.stage === "Hired");
+    const interviewCandidates = scopedCandidates.filter(
+      (c) => c.stage === "Interview" || c.stage === "Interviewing",
+    );
+
     const totalHeadcount = filteredJobs.reduce((a, j) => a + (j.headcount || 0), 0);
-    const totalHired = filteredJobs.reduce((a, j) => a + (j.hired_count || 0), 0);
+    const totalHired = hiredCandidates.length;
     const open = filteredJobs.filter((j) => j.status === "Open").length;
     const regions = new Set(filteredJobs.map((j) => j.region)).size;
     const branches = new Set(filteredJobs.map((j) => `${j.region}|${j.branch}`)).size;
+
+    const hiredByJob = new Map<string, number>();
+    for (const c of hiredCandidates) {
+      if (!c.job_id) continue;
+      hiredByJob.set(c.job_id, (hiredByJob.get(c.job_id) || 0) + 1);
+    }
 
     const byRegion = REGION_ORDER
       .map((r) => {
@@ -98,7 +122,7 @@ function Dashboard() {
         return {
           region: r,
           total: list.reduce((a, j) => a + j.headcount, 0),
-          hired: list.reduce((a, j) => a + j.hired_count, 0),
+          hired: list.reduce((a, j) => a + (hiredByJob.get(j.id) || 0), 0),
         };
       })
       .filter((r) => r.total > 0);
@@ -110,8 +134,18 @@ function Dashboard() {
       }, {}),
     ).sort((a, b) => b[1] - a[1]);
 
-    return { totalHeadcount, totalHired, open, regions, branches, byRegion, byRole };
-  }, [filteredJobs]);
+    return {
+      totalHeadcount,
+      totalHired,
+      open,
+      regions,
+      branches,
+      byRegion,
+      byRole,
+      totalCandidates: scopedCandidates.length,
+      interview: interviewCandidates.length,
+    };
+  }, [filteredJobs, candidates]);
 
   const hasFilters = regionFilter !== "all" || branchFilter !== "all";
 
@@ -119,6 +153,7 @@ function Dashboard() {
     ? Math.round((stats.totalHired / stats.totalHeadcount) * 100)
     : 0;
 
+  type KpiLink = { to: "/jobs"; search?: { status?: string[] } } | { to: "/candidates"; search?: { stage?: string } };
   const ALL_KPIS = useMemo(
     () => [
       {
@@ -128,14 +163,16 @@ function Dashboard() {
         icon: Briefcase,
         sub: `${stats.open} ${ar ? "مفتوح" : "open"}`,
         tone: "primary",
+        link: { to: "/jobs" } as KpiLink,
       },
       {
         id: "candidates",
         label: ar ? "المرشحون" : t("totalCandidates"),
-        value: 0,
+        value: stats.totalCandidates,
         icon: Users,
-        sub: ar ? "لا يوجد بعد" : "none yet",
+        sub: `${stats.interview} ${ar ? "قيد المقابلة" : "in interview"}`,
         tone: "accent",
+        link: { to: "/candidates" } as KpiLink,
       },
       {
         id: "regions",
@@ -152,14 +189,25 @@ function Dashboard() {
         icon: Clock,
         sub: ar ? "قيد التوظيف" : "in progress",
         tone: "warning",
+        link: { to: "/jobs", search: { status: ["Open"] } } as KpiLink,
+      },
+      {
+        id: "interview",
+        label: ar ? "قيد المقابلة" : "In Interview",
+        value: stats.interview,
+        icon: UserCheck,
+        sub: ar ? "مرشحون" : "candidates",
+        tone: "warning",
+        link: { to: "/candidates", search: { stage: "Interview" } } as KpiLink,
       },
       {
         id: "hired",
         label: ar ? "تم التوظيف" : "Hired",
         value: stats.totalHired,
         icon: CheckCircle2,
-        sub: `${stats.totalHeadcount - stats.totalHired} ${ar ? "متبقي" : "remaining"}`,
+        sub: `${Math.max(0, stats.totalHeadcount - stats.totalHired)} ${ar ? "متبقي" : "remaining"}`,
         tone: "success",
+        link: { to: "/candidates", search: { stage: "Hired" } } as KpiLink,
       },
       {
         id: "branches",
@@ -347,23 +395,37 @@ function Dashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map(({ label, value, icon: Icon, sub, tone }) => (
-          <Card key={label} className="glass shadow-elegant">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-              <div
-                className="h-8 w-8 rounded-lg flex items-center justify-center"
-                style={{ background: `color-mix(in oklab, var(--${tone}) 20%, transparent)` }}
-              >
-                <Icon className="h-4 w-4" style={{ color: `var(--${tone})` }} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{value}</div>
-              <div className="text-xs text-muted-foreground mt-1">{sub}</div>
-            </CardContent>
-          </Card>
-        ))}
+        {kpis.map(({ label, value, icon: Icon, sub, tone, link }) => {
+          const inner = (
+            <Card className={`glass shadow-elegant h-full ${link ? "cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5" : ""}`}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+                <div
+                  className="h-8 w-8 rounded-lg flex items-center justify-center"
+                  style={{ background: `color-mix(in oklab, var(--${tone}) 20%, transparent)` }}
+                >
+                  <Icon className="h-4 w-4" style={{ color: `var(--${tone})` }} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{value}</div>
+                <div className="text-xs text-muted-foreground mt-1">{sub}</div>
+              </CardContent>
+            </Card>
+          );
+          return link ? (
+            <Link
+              key={label}
+              to={link.to}
+              search={link.search as never}
+              className="block"
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div key={label}>{inner}</div>
+          );
+        })}
       </div>
 
       {/* Two columns: Regional + Role distribution */}

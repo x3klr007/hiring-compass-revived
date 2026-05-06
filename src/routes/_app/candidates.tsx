@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { roleLabel, genderLabel } from "@/lib/labels";
@@ -49,6 +49,7 @@ type Job = { id: string; title: string; region: string };
 
 function CandidatesPage() {
   const { t, lang, dir } = useI18n();
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [region, setRegion] = useState<string>("");
@@ -77,8 +78,10 @@ function CandidatesPage() {
     load();
   }, []);
 
+  const stageFilter = Route.useSearch().stage;
   const filtered = useMemo(() => {
     return candidates.filter((c) => {
+      if (stageFilter && c.stage !== stageFilter) return false;
       if (gender && c.gender !== gender) return false;
       if (region) {
         const job = c.job_id ? jobs[c.job_id] : null;
@@ -96,7 +99,7 @@ function CandidatesPage() {
       }
       return true;
     });
-  }, [candidates, jobs, region, gender, q]);
+  }, [candidates, jobs, region, gender, q, stageFilter]);
 
   const byGender = (g: "male" | "female") => filtered.filter((c) => c.gender === g);
 
@@ -125,6 +128,22 @@ function CandidatesPage() {
             : "All candidates, auto-sorted by school type and region."}
         </p>
       </div>
+
+      {stageFilter && (
+        <Card className="glass p-3 flex items-center justify-between gap-3">
+          <div className="text-sm">
+            {lang === "ar" ? "مفلتر حسب المرحلة:" : "Filtered by stage:"}{" "}
+            <Badge variant="secondary">{stageFilter}</Badge>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate({ to: "/candidates", search: {} })}
+          >
+            {lang === "ar" ? "مسح الفلتر" : "Clear filter"}
+          </Button>
+        </Card>
+      )}
 
       <Card className="glass shadow-elegant p-4 space-y-4">
         <div className="flex flex-wrap gap-2">
@@ -523,6 +542,11 @@ function MoveDialog({
   );
 }
 
+type CandidatesSearch = { stage?: string };
+
 export const Route = createFileRoute("/_app/candidates")({
   component: CandidatesPage,
+  validateSearch: (raw: Record<string, unknown>): CandidatesSearch => ({
+    stage: typeof raw.stage === "string" && raw.stage ? raw.stage : undefined,
+  }),
 });
