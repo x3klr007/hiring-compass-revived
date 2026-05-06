@@ -96,10 +96,21 @@ function JobsPage() {
     else { setSortBy(key); setSortDir("asc"); }
   };
 
+  // Normalize Arabic input so "مدرب خبير", "مُدرّب خبير", "مدرب خبير " all match.
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[\u064B-\u0652\u0670]/g, "") // diacritics
+      .replace(/[إأآا]/g, "ا")
+      .replace(/ى/g, "ي")
+      .replace(/ة/g, "ه")
+      .replace(/\s+/g, " ")
+      .trim();
+
   useEffect(() => {
     const trimmed = search.trim();
     const id = setTimeout(() => {
-      setDebouncedSearch(trimmed.toLowerCase());
+      setDebouncedSearch(normalize(trimmed));
       navigate({
         search: (prev: JobsSearch) => ({ ...prev, q: trimmed || undefined }),
         replace: true,
@@ -126,7 +137,9 @@ function JobsPage() {
     return allJobs.filter((j) => {
       if (statuses.size && !statuses.has(j.status)) return false;
       if (debouncedSearch) {
-        const hay = `${j.title} ${roleLabel(j.title, "en")} ${roleLabel(j.title, "ar")} ${j.job_code}`.toLowerCase();
+        const hay = normalize(
+          `${j.title} ${roleLabel(j.title, "en")} ${roleLabel(j.title, "ar")} ${j.job_code} ${j.region} ${j.branch}`,
+        );
         if (!hay.includes(debouncedSearch)) return false;
       }
       return true;
