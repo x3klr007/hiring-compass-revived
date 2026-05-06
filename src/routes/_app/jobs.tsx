@@ -941,7 +941,7 @@ function SuggestionList({ jobs, onPickJob }: { jobs: Job[]; onPickJob: (j: Job) 
           >
             <span className="flex items-center gap-2 min-w-0">
               <span className="font-mono text-xs text-muted-foreground shrink-0">{j.job_code}</span>
-              <span className="truncate">{j.title}</span>
+              <span className="truncate">{roleLabel(j.title, "ar")}</span>
             </span>
             <span className="flex items-center gap-2 shrink-0">
               <Badge variant="outline" className="text-xs">{j.region}</Badge>
