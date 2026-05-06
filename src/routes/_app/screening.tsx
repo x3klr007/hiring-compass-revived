@@ -664,19 +664,40 @@ function ScreeningPage() {
         </Button>
       </Card>
 
-      {summary && (
+      {summary && (() => {
+        const visible = results.filter((r) => {
+          if (!r.ok || !r.extracted) return true;
+          const ex = r.extracted;
+          if (genderFilter !== "any" && ex.gender && ex.gender !== genderFilter) return false;
+          if (defaultRegion && ex.city && ex.city !== defaultRegion) return false;
+          if (roleType && ex.suggested_positions?.length) {
+            const hit = ex.suggested_positions.some(
+              (p) => p.toLowerCase().trim() === roleType.toLowerCase().trim(),
+            );
+            if (!hit) return false;
+          }
+          return true;
+        });
+        const okCount = visible.filter((r) => r.ok).length;
+        const hiddenByFilters = results.length - visible.length;
+        return (
         <Card className="glass shadow-elegant p-6 space-y-3">
           <div className="flex items-center justify-between">
             <div className="font-semibold flex items-center gap-2">
               <Folder className="h-4 w-4" />
               {lang === "ar"
-                ? `النتائج: ${results.filter((r) => r.ok).length} / ${summary.total}`
-                : `Results: ${results.filter((r) => r.ok).length} / ${summary.total}`}
+                ? `النتائج: ${okCount} / ${summary.total}`
+                : `Results: ${okCount} / ${summary.total}`}
             </div>
             <div className="flex items-center gap-2">
               {summary.skipped > 0 && (
                 <Badge variant="secondary">
                   {summary.skipped} {lang === "ar" ? "متجاهل" : "skipped"}
+                </Badge>
+              )}
+              {hiddenByFilters > 0 && (
+                <Badge variant="outline">
+                  {hiddenByFilters} {lang === "ar" ? "مخفي بالتصفية" : "hidden by filters"}
                 </Badge>
               )}
               {summary.filteredByGender ? (
