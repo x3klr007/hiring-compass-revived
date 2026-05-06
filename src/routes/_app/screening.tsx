@@ -36,9 +36,28 @@ function ScreeningPage() {
   const healthCheck = useAuthedServerFn(checkDriveHealth);
   const [link, setLink] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [roleType, setRoleType] = useState<string>(
-    () => (typeof window !== "undefined" && localStorage.getItem("screening.roleType")) || "",
-  );
+  // Migrate legacy localStorage values to canonical role titles.
+  if (typeof window !== "undefined") {
+    const ROLE_MIGRATION: Record<string, string> = {
+      "Stage Trainer": "Trainer",
+      "Headquarters": "Head Office",
+      "Central Admin": "Head Office",
+    };
+    const saved = localStorage.getItem("screening.roleType");
+    if (saved && ROLE_MIGRATION[saved]) {
+      localStorage.setItem("screening.roleType", ROLE_MIGRATION[saved]);
+    }
+  }
+  const [roleType, setRoleType] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    const v = localStorage.getItem("screening.roleType") || "";
+    const MIG: Record<string, string> = {
+      "Stage Trainer": "Trainer",
+      "Headquarters": "Head Office",
+      "Central Admin": "Head Office",
+    };
+    return MIG[v] ?? v;
+  });
   const [defaultRegion, setDefaultRegion] = useState<string>(
     () => (typeof window !== "undefined" && localStorage.getItem("screening.region")) || "",
   );
