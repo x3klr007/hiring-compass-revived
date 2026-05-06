@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Link2, Loader2, CheckCircle2, AlertCircle, Folder } from "lucide-react";
 import { ingestFromDriveLink, checkDriveHealth, type IngestResult } from "@/server/cv-ingest.functions";
 import { REGIONS, regionLabel } from "@/lib/regions";
+import { roleLabel, genderLabel } from "@/lib/labels";
 import { toast } from "sonner";
 
 function parseDriveLinkClient(input: string): { kind: "folder" | "file"; id: string } | null {
