@@ -95,11 +95,26 @@ function Dashboard() {
   );
 
   const stats = useMemo(() => {
+    const filteredJobIds = new Set(filteredJobs.map((j) => j.id));
+    const scopedCandidates = candidates.filter(
+      (c) => !c.job_id || filteredJobIds.has(c.job_id),
+    );
+    const hiredCandidates = scopedCandidates.filter((c) => c.stage === "Hired");
+    const interviewCandidates = scopedCandidates.filter(
+      (c) => c.stage === "Interview" || c.stage === "Interviewing",
+    );
+
     const totalHeadcount = filteredJobs.reduce((a, j) => a + (j.headcount || 0), 0);
-    const totalHired = filteredJobs.reduce((a, j) => a + (j.hired_count || 0), 0);
+    const totalHired = hiredCandidates.length;
     const open = filteredJobs.filter((j) => j.status === "Open").length;
     const regions = new Set(filteredJobs.map((j) => j.region)).size;
     const branches = new Set(filteredJobs.map((j) => `${j.region}|${j.branch}`)).size;
+
+    const hiredByJob = new Map<string, number>();
+    for (const c of hiredCandidates) {
+      if (!c.job_id) continue;
+      hiredByJob.set(c.job_id, (hiredByJob.get(c.job_id) || 0) + 1);
+    }
 
     const byRegion = REGION_ORDER
       .map((r) => {
@@ -107,7 +122,7 @@ function Dashboard() {
         return {
           region: r,
           total: list.reduce((a, j) => a + j.headcount, 0),
-          hired: list.reduce((a, j) => a + j.hired_count, 0),
+          hired: list.reduce((a, j) => a + (hiredByJob.get(j.id) || 0), 0),
         };
       })
       .filter((r) => r.total > 0);
@@ -119,8 +134,18 @@ function Dashboard() {
       }, {}),
     ).sort((a, b) => b[1] - a[1]);
 
-    return { totalHeadcount, totalHired, open, regions, branches, byRegion, byRole };
-  }, [filteredJobs]);
+    return {
+      totalHeadcount,
+      totalHired,
+      open,
+      regions,
+      branches,
+      byRegion,
+      byRole,
+      totalCandidates: scopedCandidates.length,
+      interview: interviewCandidates.length,
+    };
+  }, [filteredJobs, candidates]);
 
   const hasFilters = regionFilter !== "all" || branchFilter !== "all";
 
