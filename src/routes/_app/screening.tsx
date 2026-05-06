@@ -41,18 +41,22 @@ function ScreeningPage() {
   const [defaultRegion, setDefaultRegion] = useState<string>(
     () => (typeof window !== "undefined" && localStorage.getItem("screening.region")) || "",
   );
-  const ROLE_TYPES = [
-    { v: "Stage Trainer", ar: "مدرب مراحل" },
-    { v: "Expert Trainer", ar: "مدرب خبير" },
-    { v: "Admin Supervisor", ar: "مشرف إداري" },
-    { v: "Training Director", ar: "مدير التدريب (الإدارة الرئيسية)" },
-    { v: "HR Manager", ar: "مدير الموارد البشرية (الإدارة الرئيسية)" },
-    { v: "Operations Manager", ar: "مدير العمليات (الإدارة الرئيسية)" },
-    { v: "QA Manager", ar: "مدير ضمان الجودة (الإدارة الرئيسية)" },
-    { v: "IT Manager", ar: "مدير تقنية المعلومات (الإدارة الرئيسية)" },
-    { v: "Finance Manager", ar: "مدير المالية (الإدارة الرئيسية)" },
-    { v: "Recruitment Coordinator", ar: "منسق التوظيف (الإدارة الرئيسية)" },
+  const HQ_SUFFIX_AR = " — الإدارة الرئيسية";
+  const HQ_SUFFIX_EN = " — HQ";
+  const ROLE_TYPES: Array<{ v: string; hq?: boolean }> = [
+    { v: "Stage Trainer" },
+    { v: "Expert Trainer" },
+    { v: "Admin Supervisor" },
+    { v: "Training Director", hq: true },
+    { v: "HR Manager", hq: true },
+    { v: "Operations Manager", hq: true },
+    { v: "QA Manager", hq: true },
+    { v: "IT Manager", hq: true },
+    { v: "Finance Manager", hq: true },
+    { v: "Recruitment Coordinator", hq: true },
   ];
+  const roleDisplay = (v: string, hq?: boolean) =>
+    `${roleLabel(v, lang)}${hq ? (lang === "ar" ? HQ_SUFFIX_AR : HQ_SUFFIX_EN) : ""}`;
   // Resolve to a concrete job id from (roleType, region). If multiple matches
   // exist, pick the first; if none, leave null and let the server auto-suggest.
   const defaultJobId = (() => {
