@@ -443,7 +443,7 @@ function JobsPage() {
                         <div key={branch}>
                           <div className="flex items-center gap-2 px-5 py-2 bg-background/40">
                             <BranchIcon branch={branch} />
-                            <span className="font-medium">{branch}</span>
+                            <span className="font-medium">{branchLabel(branch, lang)}</span>
                             <span className="text-xs text-muted-foreground">
                               · {list.length} {ar ? "وظيفة" : "roles"}
                             </span>
