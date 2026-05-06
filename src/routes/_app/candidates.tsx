@@ -198,7 +198,7 @@ function CandidatesPage() {
                     <div className="text-xs text-muted-foreground mt-1 truncate">{c.email}</div>
                     {(job || cityLabel) && (
                       <div className="text-xs mt-1">
-                        {job && <>{job.title} · </>}
+                        {job && <>{roleLabel(job.title, lang)} · </>}
                         {cityLabel ?? (job && regionLabel(job.region, lang))}
                       </div>
                     )}
