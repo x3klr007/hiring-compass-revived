@@ -117,7 +117,7 @@ export async function exportJobsToXlsx(jobs: ExportJob[]) {
       idx + 1,
       j.region,
       j.branch,
-      j.branch === "Headquarters" ? "-" : "All Stages",
+      j.branch === "Head Office" || j.branch === "Headquarters" ? "-" : "All Stages",
       j.title,
       "Full-time",
       j.headcount,
