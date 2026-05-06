@@ -668,13 +668,7 @@ function ScreeningPage() {
                         <span className="font-medium text-foreground">{r.extracted.full_name}</span>
                         {r.extracted.gender && (
                           <Badge variant="outline" className="ms-2">
-                            {r.extracted.gender === "female"
-                              ? lang === "ar"
-                                ? "أنثى"
-                                : "Female"
-                              : lang === "ar"
-                                ? "ذكر"
-                                : "Male"}
+                            {genderLabel(r.extracted.gender as "male" | "female", lang)}
                           </Badge>
                         )}
                       </div>
