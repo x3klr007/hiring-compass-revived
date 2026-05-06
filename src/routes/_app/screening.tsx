@@ -621,7 +621,7 @@ function ScreeningPage() {
 
         {(() => {
           const rl = roleType
-            ? roleDisplay(roleType, ROLE_TYPES.find((r) => r.v === roleType)?.hq)
+            ? roleDisplay(roleType)
             : (lang === "ar" ? "تلقائي" : "Auto");
           const rg = defaultRegion ? regionLabel(defaultRegion, lang) : (lang === "ar" ? "تلقائي" : "Auto");
           const sc = genderLabel(genderFilter, lang);
