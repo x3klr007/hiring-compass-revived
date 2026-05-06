@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuthedServerFn } from "@/hooks/useAuthedServerFn";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -71,16 +71,16 @@ function ScreeningPage() {
     if (typeof window !== "undefined") localStorage.setItem("screening.roleGroup", roleGroup);
   }, [roleGroup]);
   const roleDisplay = (v: string) => roleLabel(v, lang);
-  // Resolve to a concrete job id from (roleType, region). If multiple matches
-  // exist, pick the first; if none, leave null and let the server auto-suggest.
-  const defaultJobId = (() => {
+  // Resolve to a concrete job id from (roleType, region). Memoized so changes
+  // to roleType/region/jobs trigger an immediate recompute without stale reads.
+  const defaultJobId = useMemo(() => {
     if (!roleType) return "";
     const matches = jobs.filter(
       (j) => j.title.toLowerCase().trim() === roleType.toLowerCase().trim() &&
         (!defaultRegion || j.region === defaultRegion),
     );
     return matches[0]?.id ?? "";
-  })();
+  }, [jobs, roleType, defaultRegion]);
   const [genderFilter, setGenderFilter] = useState<"any" | "male" | "female">(
     () => ((typeof window !== "undefined" && (localStorage.getItem("screening.gender") as "any" | "male" | "female")) || "any"),
   );
@@ -664,19 +664,40 @@ function ScreeningPage() {
         </Button>
       </Card>
 
-      {summary && (
+      {summary && (() => {
+        const visible = results.filter((r) => {
+          if (!r.ok || !r.extracted) return true;
+          const ex = r.extracted;
+          if (genderFilter !== "any" && ex.gender && ex.gender !== genderFilter) return false;
+          if (defaultRegion && ex.city && ex.city !== defaultRegion) return false;
+          if (roleType && ex.suggested_positions?.length) {
+            const hit = ex.suggested_positions.some(
+              (p) => p.toLowerCase().trim() === roleType.toLowerCase().trim(),
+            );
+            if (!hit) return false;
+          }
+          return true;
+        });
+        const okCount = visible.filter((r) => r.ok).length;
+        const hiddenByFilters = results.length - visible.length;
+        return (
         <Card className="glass shadow-elegant p-6 space-y-3">
           <div className="flex items-center justify-between">
             <div className="font-semibold flex items-center gap-2">
               <Folder className="h-4 w-4" />
               {lang === "ar"
-                ? `النتائج: ${results.filter((r) => r.ok).length} / ${summary.total}`
-                : `Results: ${results.filter((r) => r.ok).length} / ${summary.total}`}
+                ? `النتائج: ${okCount} / ${summary.total}`
+                : `Results: ${okCount} / ${summary.total}`}
             </div>
             <div className="flex items-center gap-2">
               {summary.skipped > 0 && (
                 <Badge variant="secondary">
                   {summary.skipped} {lang === "ar" ? "متجاهل" : "skipped"}
+                </Badge>
+              )}
+              {hiddenByFilters > 0 && (
+                <Badge variant="outline">
+                  {hiddenByFilters} {lang === "ar" ? "مخفي بالتصفية" : "hidden by filters"}
                 </Badge>
               )}
               {summary.filteredByGender ? (
@@ -688,7 +709,7 @@ function ScreeningPage() {
             </div>
           </div>
           <div className="space-y-2">
-            {results.map((r, i) => (
+            {visible.map((r, i) => (
               <div
                 key={i}
                 className="flex items-start gap-3 rounded-lg border bg-card/50 p-3 text-sm"
@@ -728,7 +749,8 @@ function ScreeningPage() {
             ))}
           </div>
         </Card>
-      )}
+        );
+      })()}
     </div>
   );
 }
