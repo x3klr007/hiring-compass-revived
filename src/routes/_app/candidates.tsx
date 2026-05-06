@@ -390,15 +390,15 @@ function EditDialog({
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label>{lang === "ar" ? "الجنس" : "Gender"}</Label>
+            <Label>{lang === "ar" ? "نوع المدرسة" : "School type"}</Label>
             <select
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={form.gender ?? ""}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
             >
               <option value="">—</option>
-              <option value="male">{lang === "ar" ? "ذكر" : "Male"}</option>
-              <option value="female">{lang === "ar" ? "أنثى" : "Female"}</option>
+              <option value="male">{lang === "ar" ? "مدارس بنين" : "Boys school"}</option>
+              <option value="female">{lang === "ar" ? "مدارس بنات" : "Girls school"}</option>
             </select>
           </div>
         </div>
