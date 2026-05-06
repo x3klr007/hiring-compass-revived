@@ -451,7 +451,7 @@ function Dashboard() {
                           className="h-2.5 w-2.5 rounded-full"
                           style={{ background: ROLE_COLORS[title] ?? "var(--muted-foreground)" }}
                         />
-                        {title}
+                        {roleLabel(title, lang)}
                       </span>
                       <span className="tabular-nums text-muted-foreground">
                         {count}
