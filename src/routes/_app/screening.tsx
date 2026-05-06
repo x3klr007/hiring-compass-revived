@@ -584,6 +584,30 @@ function ScreeningPage() {
           )}
         </div>
 
+
+        {(() => {
+          const rl = roleType
+            ? (lang === "ar" ? (ROLE_TYPES.find((r) => r.v === roleType)?.ar ?? roleType) : roleType)
+            : (lang === "ar" ? "تلقائي" : "Auto");
+          const rg = defaultRegion ? regionLabel(defaultRegion, lang) : (lang === "ar" ? "تلقائي" : "Auto");
+          const sc = genderFilter === "any"
+            ? (lang === "ar" ? "تلقائي / الكل" : "Auto / All")
+            : genderFilter === "male"
+              ? (lang === "ar" ? "مدارس بنين" : "Boys school")
+              : (lang === "ar" ? "مدارس بنات" : "Girls school");
+          return (
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="text-xs text-muted-foreground mb-2">
+                {lang === "ar" ? "ملخص التصفية قبل التشغيل" : "Filter summary before running"}
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="outline">{lang === "ar" ? "الوظيفة:" : "Role:"} <span className="ms-1 font-semibold">{rl}</span></Badge>
+                <Badge variant="outline">{lang === "ar" ? "المنطقة:" : "Region:"} <span className="ms-1 font-semibold">{rg}</span></Badge>
+                <Badge variant="outline">{lang === "ar" ? "نوع المدرسة:" : "School:"} <span className="ms-1 font-semibold">{sc}</span></Badge>
+              </div>
+            </div>
+          );
+        })()}
         <Button onClick={onRun} disabled={running || (driveHealth ? !driveHealth.ok : false) || (link.trim() ? !parseDriveLinkClient(link) : false)} size="lg" className="w-full md:w-auto">
           {running ? (
             <>
