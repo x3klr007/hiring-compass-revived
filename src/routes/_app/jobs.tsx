@@ -545,14 +545,14 @@ function JobDetailsDialog({
                 <Badge variant={job.status === "Open" ? "default" : "secondary"}>{job.status}</Badge>
                 <Badge variant="outline">{classification}</Badge>
               </div>
-              <DialogTitle className="text-2xl">{job.title}</DialogTitle>
+              <DialogTitle className="text-2xl">{roleLabel(job.title, lang)}</DialogTitle>
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap pt-1">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5" />
                   {job.region}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <BranchIcon branch={job.branch} /> {job.branch}
+                  <BranchIcon branch={job.branch} /> {branchLabel(job.branch, lang)}
                 </span>
                 {job.opened_at && (
                   <span className="flex items-center gap-1.5">
