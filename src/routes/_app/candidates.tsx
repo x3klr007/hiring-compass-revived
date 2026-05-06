@@ -508,7 +508,7 @@ function MoveDialog({
               <option value="">—</option>
               {filteredJobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.title} — {regionLabel(j.region, lang)}
+                  {roleLabel(j.title, lang)} — {regionLabel(j.region, lang)}
                 </option>
               ))}
             </select>
