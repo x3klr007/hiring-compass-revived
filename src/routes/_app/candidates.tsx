@@ -77,8 +77,10 @@ function CandidatesPage() {
     load();
   }, []);
 
+  const stageFilter = Route.useSearch().stage;
   const filtered = useMemo(() => {
     return candidates.filter((c) => {
+      if (stageFilter && c.stage !== stageFilter) return false;
       if (gender && c.gender !== gender) return false;
       if (region) {
         const job = c.job_id ? jobs[c.job_id] : null;
@@ -96,7 +98,7 @@ function CandidatesPage() {
       }
       return true;
     });
-  }, [candidates, jobs, region, gender, q]);
+  }, [candidates, jobs, region, gender, q, stageFilter]);
 
   const byGender = (g: "male" | "female") => filtered.filter((c) => c.gender === g);
 
