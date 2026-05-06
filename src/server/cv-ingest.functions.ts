@@ -154,32 +154,27 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
         : [await getDriveFileMeta(parsed.id)];
 
     const targets = files.filter((f) => isSupported(f.name, f.mimeType));
-    const results: IngestResult[] = [];
     let filteredByGender = 0;
 
-    for (const f of targets) {
+    const processOne = async (f: typeof targets[number]): Promise<IngestResult> => {
       try {
         const buf = await downloadDriveFile(f.id);
         const text = await extractTextFromBuffer(f.name, f.mimeType, buf);
         if (!text || text.trim().length < 30) {
-          results.push({ source_name: f.name, ok: false, error: "Empty/unreadable CV" });
-          continue;
+          return { source_name: f.name, ok: false, error: "Empty/unreadable CV" };
         }
         const ex = await extractCandidateFromText(text, openJobs);
 
-        // Gender filter
         const wantGender = data.genderFilter && data.genderFilter !== "any" ? data.genderFilter : null;
         if (wantGender && ex.gender && ex.gender !== wantGender) {
           filteredByGender += 1;
-          results.push({
+          return {
             source_name: f.name,
             ok: false,
             error: `FILTERED_GENDER: ${ex.full_name || f.name} (${ex.gender})`,
-          });
-          continue;
+          };
         }
 
-        // Reject duplicates by email (case-insensitive)
         if (ex.email) {
           const { data: existing } = await supabase
             .from("candidates")
@@ -187,16 +182,14 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
             .ilike("email", ex.email)
             .maybeSingle();
           if (existing) {
-            results.push({
+            return {
               source_name: f.name,
               ok: false,
               error: `DUPLICATE: ${existing.full_name} <${existing.email}>`,
-            });
-            continue;
+            };
           }
         }
 
-        // match suggested position to open job title (for default region)
         let job_id: string | null = data.defaultJobId ?? null;
         let region = data.defaultRegion ?? null;
         if (!job_id && ex.suggested_positions?.length) {
@@ -227,7 +220,7 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
           .from("candidates")
           .insert({
             full_name: ex.full_name || f.name,
-            email: ex.email || `unknown+${Date.now()}@placeholder.local`,
+            email: ex.email || `unknown+${Date.now()}-${Math.random().toString(36).slice(2, 8)}@placeholder.local`,
             phone: ex.phone,
             city: ex.city,
             gender: ex.gender,
@@ -242,11 +235,26 @@ export const ingestFromDriveLink = createServerFn({ method: "POST" })
           .single();
 
         if (error) throw new Error(error.message);
-        results.push({ source_name: f.name, ok: true, candidate_id: inserted.id, extracted: ex });
+        return { source_name: f.name, ok: true, candidate_id: inserted.id, extracted: ex };
       } catch (err) {
-        results.push({ source_name: f.name, ok: false, error: (err as Error).message });
+        return { source_name: f.name, ok: false, error: (err as Error).message };
       }
-    }
+    };
+
+    // Bounded concurrency: process up to CONCURRENCY CVs in parallel.
+    // Tuned for Drive API rate limits and Lovable AI throughput.
+    const CONCURRENCY = 4;
+    const results: IngestResult[] = new Array(targets.length);
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(CONCURRENCY, targets.length) }, async () => {
+      while (true) {
+        const i = cursor++;
+        if (i >= targets.length) return;
+        results[i] = await processOne(targets[i]);
+      }
+    });
+    await Promise.all(workers);
+
 
     return {
       total: targets.length,
