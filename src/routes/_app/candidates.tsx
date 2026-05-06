@@ -49,6 +49,7 @@ type Job = { id: string; title: string; region: string };
 
 function CandidatesPage() {
   const { t, lang, dir } = useI18n();
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [region, setRegion] = useState<string>("");
