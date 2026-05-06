@@ -242,7 +242,7 @@ function Dashboard() {
             <SelectContent>
               <SelectItem value="all">{ar ? "كل الفروع" : "All branches"}</SelectItem>
               {availableBranches.map((b) => (
-                <SelectItem key={b} value={b}>{b}</SelectItem>
+                <SelectItem key={b} value={b}>{branchLabel(b, lang)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
