@@ -669,7 +669,7 @@ function ScreeningPage() {
               {summary.filteredByGender ? (
                 <Badge variant="outline">
                   {summary.filteredByGender}{" "}
-                  {lang === "ar" ? "مستبعد بالجنس" : "filtered by gender"}
+                  {lang === "ar" ? "مستبعد حسب نوع المدرسة" : "filtered by school type"}
                 </Badge>
               ) : null}
             </div>
