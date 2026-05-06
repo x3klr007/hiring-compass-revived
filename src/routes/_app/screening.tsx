@@ -35,8 +35,12 @@ function ScreeningPage() {
   const healthCheck = useAuthedServerFn(checkDriveHealth);
   const [link, setLink] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [roleType, setRoleType] = useState<string>("");
-  const [defaultRegion, setDefaultRegion] = useState<string>("");
+  const [roleType, setRoleType] = useState<string>(
+    () => (typeof window !== "undefined" && localStorage.getItem("screening.roleType")) || "",
+  );
+  const [defaultRegion, setDefaultRegion] = useState<string>(
+    () => (typeof window !== "undefined" && localStorage.getItem("screening.region")) || "",
+  );
   const ROLE_TYPES = [
     { v: "Stage Trainer", ar: "مدرب مراحل" },
     { v: "Expert Trainer", ar: "مدرب خبير" },
@@ -59,7 +63,19 @@ function ScreeningPage() {
     );
     return matches[0]?.id ?? "";
   })();
-  const [genderFilter, setGenderFilter] = useState<"any" | "male" | "female">("any");
+  const [genderFilter, setGenderFilter] = useState<"any" | "male" | "female">(
+    () => ((typeof window !== "undefined" && (localStorage.getItem("screening.gender") as "any" | "male" | "female")) || "any"),
+  );
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("screening.roleType", roleType);
+  }, [roleType]);
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("screening.region", defaultRegion);
+  }, [defaultRegion]);
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("screening.gender", genderFilter);
+  }, [genderFilter]);
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<IngestResult[]>([]);
   const [summary, setSummary] = useState<{ total: number; skipped: number; filteredByGender?: number } | null>(null);
