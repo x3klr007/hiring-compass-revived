@@ -44,20 +44,33 @@ function ScreeningPage() {
   );
   const HQ_SUFFIX_AR = " — الإدارة الرئيسية";
   const HQ_SUFFIX_EN = " — HQ";
-  const ROLE_TYPES: Array<{ v: string; hq?: boolean }> = [
-    { v: "Stage Trainer" },
-    { v: "Expert Trainer" },
-    { v: "Admin Supervisor" },
-    { v: "Training Director", hq: true },
-    { v: "HR Manager", hq: true },
-    { v: "Operations Manager", hq: true },
-    { v: "QA Manager", hq: true },
-    { v: "IT Manager", hq: true },
-    { v: "Finance Manager", hq: true },
-    { v: "Recruitment Coordinator", hq: true },
+  type RoleGroup = "training" | "supervision" | "hq";
+  const ROLE_TYPES: Array<{ v: string; group: RoleGroup }> = [
+    { v: "Stage Trainer", group: "training" },
+    { v: "Expert Trainer", group: "training" },
+    { v: "Admin Supervisor", group: "supervision" },
+    { v: "Training Director", group: "hq" },
+    { v: "HR Manager", group: "hq" },
+    { v: "Operations Manager", group: "hq" },
+    { v: "QA Manager", group: "hq" },
+    { v: "IT Manager", group: "hq" },
+    { v: "Finance Manager", group: "hq" },
+    { v: "Recruitment Coordinator", group: "hq" },
   ];
-  const roleDisplay = (v: string, hq?: boolean) =>
-    `${roleLabel(v, lang)}${hq ? (lang === "ar" ? HQ_SUFFIX_AR : HQ_SUFFIX_EN) : ""}`;
+  const ROLE_GROUPS: Array<{ id: RoleGroup; ar: string; en: string }> = [
+    { id: "training", ar: "تدريب", en: "Training" },
+    { id: "supervision", ar: "إشراف", en: "Supervision" },
+    { id: "hq", ar: "إدارة رئيسية", en: "Headquarters" },
+  ];
+  const [roleGroup, setRoleGroup] = useState<RoleGroup>(() => {
+    if (typeof window === "undefined") return "training";
+    const saved = localStorage.getItem("screening.roleGroup") as RoleGroup | null;
+    return saved ?? "training";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("screening.roleGroup", roleGroup);
+  }, [roleGroup]);
+  const roleDisplay = (v: string) => roleLabel(v, lang);
   // Resolve to a concrete job id from (roleType, region). If multiple matches
   // exist, pick the first; if none, leave null and let the server auto-suggest.
   const defaultJobId = (() => {
@@ -509,7 +522,23 @@ function ScreeningPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>{lang === "ar" ? "نوع الوظيفة" : "Role type"}</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1 w-fit">
+              {ROLE_GROUPS.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setRoleGroup(g.id)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+                    roleGroup === g.id
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {lang === "ar" ? g.ar : g.en}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setRoleType("")}
@@ -517,14 +546,14 @@ function ScreeningPage() {
               >
                 {lang === "ar" ? "تلقائي" : "Auto"}
               </button>
-              {ROLE_TYPES.map((r) => (
+              {ROLE_TYPES.filter((r) => r.group === roleGroup).map((r) => (
                 <button
                   key={r.v}
                   type="button"
                   onClick={() => setRoleType(r.v)}
                   className={`px-3 py-1.5 rounded-full text-xs border transition ${roleType === r.v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
                 >
-                  {roleDisplay(r.v, r.hq)}
+                  {roleDisplay(r.v)}
                 </button>
               ))}
             </div>
@@ -592,7 +621,7 @@ function ScreeningPage() {
 
         {(() => {
           const rl = roleType
-            ? roleDisplay(roleType, ROLE_TYPES.find((r) => r.v === roleType)?.hq)
+            ? roleDisplay(roleType)
             : (lang === "ar" ? "تلقائي" : "Auto");
           const rg = defaultRegion ? regionLabel(defaultRegion, lang) : (lang === "ar" ? "تلقائي" : "Auto");
           const sc = genderLabel(genderFilter, lang);
