@@ -530,8 +530,8 @@ function ScreeningPage() {
           <div className="flex flex-wrap gap-2">
             {([
               { v: "any", ar: "الكل", en: "All" },
-              { v: "male", ar: "للبنين فقط", en: "Males only" },
-              { v: "female", ar: "للبنات فقط", en: "Females only" },
+              { v: "male", ar: "بنين", en: "Boys school" },
+              { v: "female", ar: "بنات", en: "Girls school" },
             ] as const).map((opt) => (
               <button
                 key={opt.v}
