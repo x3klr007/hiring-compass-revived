@@ -121,8 +121,8 @@ function CandidatesPage() {
         </h1>
         <p className="text-muted-foreground mt-1">
           {lang === "ar"
-            ? "كل المرشحين، مفروزون تلقائياً حسب الجنس والمنطقة."
-            : "All candidates, auto-sorted by gender and region."}
+            ? "كل المرشحين، مفروزون تلقائياً حسب نوع المدرسة والمنطقة."
+            : "All candidates, auto-sorted by school type and region."}
         </p>
       </div>
 
