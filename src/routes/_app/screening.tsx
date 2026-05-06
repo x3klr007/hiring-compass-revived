@@ -522,7 +522,23 @@ function ScreeningPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>{lang === "ar" ? "نوع الوظيفة" : "Role type"}</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1 w-fit">
+              {ROLE_GROUPS.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setRoleGroup(g.id)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+                    roleGroup === g.id
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {lang === "ar" ? g.ar : g.en}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setRoleType("")}
@@ -530,14 +546,14 @@ function ScreeningPage() {
               >
                 {lang === "ar" ? "تلقائي" : "Auto"}
               </button>
-              {ROLE_TYPES.map((r) => (
+              {ROLE_TYPES.filter((r) => r.group === roleGroup).map((r) => (
                 <button
                   key={r.v}
                   type="button"
                   onClick={() => setRoleType(r.v)}
                   className={`px-3 py-1.5 rounded-full text-xs border transition ${roleType === r.v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
                 >
-                  {roleDisplay(r.v, r.hq)}
+                  {roleDisplay(r.v)}
                 </button>
               ))}
             </div>
