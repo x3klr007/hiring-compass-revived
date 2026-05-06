@@ -7,6 +7,7 @@ import { exportJobsToCsv } from "@/lib/exportJobsCsv";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
+import { roleLabel, branchLabel } from "@/lib/labels";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -396,12 +397,12 @@ function JobsPage() {
                               <Highlight text={j.job_code} match={debouncedSearch} />
                             </td>
                             <td className="px-4 py-2">
-                              <Highlight text={j.title} match={debouncedSearch} />
+                              <Highlight text={roleLabel(j.title, lang)} match={debouncedSearch} />
                             </td>
                             <td className="px-4 py-2">{j.region}</td>
                             <td className="px-4 py-2">
                               <span className="inline-flex items-center gap-1.5">
-                                <BranchIcon branch={j.branch} /> {j.branch}
+                                <BranchIcon branch={j.branch} /> {branchLabel(j.branch, lang)}
                               </span>
                             </td>
                             <td className="px-4 py-2 text-end tabular-nums">{j.headcount}</td>
@@ -442,7 +443,7 @@ function JobsPage() {
                         <div key={branch}>
                           <div className="flex items-center gap-2 px-5 py-2 bg-background/40">
                             <BranchIcon branch={branch} />
-                            <span className="font-medium">{branch}</span>
+                            <span className="font-medium">{branchLabel(branch, lang)}</span>
                             <span className="text-xs text-muted-foreground">
                               · {list.length} {ar ? "وظيفة" : "roles"}
                             </span>
@@ -469,7 +470,7 @@ function JobsPage() {
                                     <Highlight text={j.job_code} match={debouncedSearch} />
                                   </td>
                                   <td className="px-4 py-2">
-                                    <Highlight text={j.title} match={debouncedSearch} />
+                                    <Highlight text={roleLabel(j.title, lang)} match={debouncedSearch} />
                                   </td>
                                   <td className="px-4 py-2">{j.headcount}</td>
                                   <td className="px-4 py-2">{j.hired_count}</td>
@@ -501,6 +502,7 @@ function JobsPage() {
 function JobDetailsDialog({
   job, onClose, ar, t,
 }: { job: Job | null; onClose: () => void; ar: boolean; t: (k: any) => string }) {
+  const lang: "ar" | "en" = ar ? "ar" : "en";
   const { data: candidates } = useQuery({
     queryKey: ["job-candidates", job?.id],
     enabled: !!job,
@@ -544,14 +546,14 @@ function JobDetailsDialog({
                 <Badge variant={job.status === "Open" ? "default" : "secondary"}>{job.status}</Badge>
                 <Badge variant="outline">{classification}</Badge>
               </div>
-              <DialogTitle className="text-2xl">{job.title}</DialogTitle>
+              <DialogTitle className="text-2xl">{roleLabel(job.title, lang)}</DialogTitle>
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap pt-1">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5" />
                   {job.region}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <BranchIcon branch={job.branch} /> {job.branch}
+                  <BranchIcon branch={job.branch} /> {branchLabel(job.branch, lang)}
                 </span>
                 {job.opened_at && (
                   <span className="flex items-center gap-1.5">
@@ -939,7 +941,7 @@ function SuggestionList({ jobs, onPickJob }: { jobs: Job[]; onPickJob: (j: Job) 
           >
             <span className="flex items-center gap-2 min-w-0">
               <span className="font-mono text-xs text-muted-foreground shrink-0">{j.job_code}</span>
-              <span className="truncate">{j.title}</span>
+              <span className="truncate">{roleLabel(j.title, "ar")}</span>
             </span>
             <span className="flex items-center gap-2 shrink-0">
               <Badge variant="outline" className="text-xs">{j.region}</Badge>

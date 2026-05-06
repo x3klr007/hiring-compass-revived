@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Link2, Loader2, CheckCircle2, AlertCircle, Folder } from "lucide-react";
 import { ingestFromDriveLink, checkDriveHealth, type IngestResult } from "@/server/cv-ingest.functions";
 import { REGIONS, regionLabel } from "@/lib/regions";
+import { roleLabel, genderLabel } from "@/lib/labels";
 import { toast } from "sonner";
 
 function parseDriveLinkClient(input: string): { kind: "folder" | "file"; id: string } | null {
@@ -41,18 +42,22 @@ function ScreeningPage() {
   const [defaultRegion, setDefaultRegion] = useState<string>(
     () => (typeof window !== "undefined" && localStorage.getItem("screening.region")) || "",
   );
-  const ROLE_TYPES = [
-    { v: "Stage Trainer", ar: "مدرب مراحل" },
-    { v: "Expert Trainer", ar: "مدرب خبير" },
-    { v: "Admin Supervisor", ar: "مشرف إداري" },
-    { v: "Training Director", ar: "مدير التدريب (الإدارة الرئيسية)" },
-    { v: "HR Manager", ar: "مدير الموارد البشرية (الإدارة الرئيسية)" },
-    { v: "Operations Manager", ar: "مدير العمليات (الإدارة الرئيسية)" },
-    { v: "QA Manager", ar: "مدير ضمان الجودة (الإدارة الرئيسية)" },
-    { v: "IT Manager", ar: "مدير تقنية المعلومات (الإدارة الرئيسية)" },
-    { v: "Finance Manager", ar: "مدير المالية (الإدارة الرئيسية)" },
-    { v: "Recruitment Coordinator", ar: "منسق التوظيف (الإدارة الرئيسية)" },
+  const HQ_SUFFIX_AR = " — الإدارة الرئيسية";
+  const HQ_SUFFIX_EN = " — HQ";
+  const ROLE_TYPES: Array<{ v: string; hq?: boolean }> = [
+    { v: "Stage Trainer" },
+    { v: "Expert Trainer" },
+    { v: "Admin Supervisor" },
+    { v: "Training Director", hq: true },
+    { v: "HR Manager", hq: true },
+    { v: "Operations Manager", hq: true },
+    { v: "QA Manager", hq: true },
+    { v: "IT Manager", hq: true },
+    { v: "Finance Manager", hq: true },
+    { v: "Recruitment Coordinator", hq: true },
   ];
+  const roleDisplay = (v: string, hq?: boolean) =>
+    `${roleLabel(v, lang)}${hq ? (lang === "ar" ? HQ_SUFFIX_AR : HQ_SUFFIX_EN) : ""}`;
   // Resolve to a concrete job id from (roleType, region). If multiple matches
   // exist, pick the first; if none, leave null and let the server auto-suggest.
   const defaultJobId = (() => {
@@ -519,7 +524,7 @@ function ScreeningPage() {
                   onClick={() => setRoleType(r.v)}
                   className={`px-3 py-1.5 rounded-full text-xs border transition ${roleType === r.v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
                 >
-                  {lang === "ar" ? r.ar : r.v}
+                  {roleDisplay(r.v, r.hq)}
                 </button>
               ))}
             </div>
@@ -587,14 +592,10 @@ function ScreeningPage() {
 
         {(() => {
           const rl = roleType
-            ? (lang === "ar" ? (ROLE_TYPES.find((r) => r.v === roleType)?.ar ?? roleType) : roleType)
+            ? roleDisplay(roleType, ROLE_TYPES.find((r) => r.v === roleType)?.hq)
             : (lang === "ar" ? "تلقائي" : "Auto");
           const rg = defaultRegion ? regionLabel(defaultRegion, lang) : (lang === "ar" ? "تلقائي" : "Auto");
-          const sc = genderFilter === "any"
-            ? (lang === "ar" ? "تلقائي / الكل" : "Auto / All")
-            : genderFilter === "male"
-              ? (lang === "ar" ? "مدارس بنين" : "Boys school")
-              : (lang === "ar" ? "مدارس بنات" : "Girls school");
+          const sc = genderLabel(genderFilter, lang);
           return (
             <div className="rounded-lg border bg-muted/30 p-3">
               <div className="text-xs text-muted-foreground mb-2">
@@ -667,13 +668,7 @@ function ScreeningPage() {
                         <span className="font-medium text-foreground">{r.extracted.full_name}</span>
                         {r.extracted.gender && (
                           <Badge variant="outline" className="ms-2">
-                            {r.extracted.gender === "female"
-                              ? lang === "ar"
-                                ? "أنثى"
-                                : "Female"
-                              : lang === "ar"
-                                ? "ذكر"
-                                : "Male"}
+                            {genderLabel(r.extracted.gender as "male" | "female", lang)}
                           </Badge>
                         )}
                       </div>

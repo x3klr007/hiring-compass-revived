@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { roleLabel } from "@/lib/labels";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -162,8 +163,8 @@ function CandidatesPage() {
               {g === ""
                 ? lang === "ar" ? "الكل" : "All"
                 : g === "male"
-                  ? lang === "ar" ? "بنين" : "Boys"
-                  : lang === "ar" ? "بنات" : "Girls"}
+                  ? lang === "ar" ? "مدارس بنين" : "Boys school"
+                  : lang === "ar" ? "مدارس بنات" : "Girls school"}
             </button>
           ))}
         </div>
@@ -175,8 +176,8 @@ function CandidatesPage() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold">
                 {g === "male"
-                  ? lang === "ar" ? "بنين" : "Boys"
-                  : lang === "ar" ? "بنات" : "Girls"}
+                  ? lang === "ar" ? "مدارس بنين" : "Boys school"
+                  : lang === "ar" ? "مدارس بنات" : "Girls school"}
               </h2>
               <Badge variant="secondary">{byGender(g).length}</Badge>
             </div>
@@ -197,7 +198,7 @@ function CandidatesPage() {
                     <div className="text-xs text-muted-foreground mt-1 truncate">{c.email}</div>
                     {(job || cityLabel) && (
                       <div className="text-xs mt-1">
-                        {job && <>{job.title} · </>}
+                        {job && <>{roleLabel(job.title, lang)} · </>}
                         {cityLabel ?? (job && regionLabel(job.region, lang))}
                       </div>
                     )}
@@ -507,7 +508,7 @@ function MoveDialog({
               <option value="">—</option>
               {filteredJobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.title} — {regionLabel(j.region, lang)}
+                  {roleLabel(j.title, lang)} — {regionLabel(j.region, lang)}
                 </option>
               ))}
             </select>

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/contexts/I18nContext";
+import { roleLabel, branchLabel } from "@/lib/labels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -242,7 +243,7 @@ function Dashboard() {
             <SelectContent>
               <SelectItem value="all">{ar ? "كل الفروع" : "All branches"}</SelectItem>
               {availableBranches.map((b) => (
-                <SelectItem key={b} value={b}>{b}</SelectItem>
+                <SelectItem key={b} value={b}>{branchLabel(b, lang)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -438,7 +439,7 @@ function Dashboard() {
                         width: `${(count / stats.totalHeadcount) * 100}%`,
                         background: ROLE_COLORS[title] ?? "var(--muted-foreground)",
                       }}
-                      title={`${title}: ${count}`}
+                      title={`${roleLabel(title, lang)}: ${count}`}
                     />
                   ))}
                 </div>
@@ -450,7 +451,7 @@ function Dashboard() {
                           className="h-2.5 w-2.5 rounded-full"
                           style={{ background: ROLE_COLORS[title] ?? "var(--muted-foreground)" }}
                         />
-                        {title}
+                        {roleLabel(title, lang)}
                       </span>
                       <span className="tabular-nums text-muted-foreground">
                         {count}
