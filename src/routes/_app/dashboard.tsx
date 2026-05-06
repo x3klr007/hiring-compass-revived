@@ -439,7 +439,7 @@ function Dashboard() {
                         width: `${(count / stats.totalHeadcount) * 100}%`,
                         background: ROLE_COLORS[title] ?? "var(--muted-foreground)",
                       }}
-                      title={`${title}: ${count}`}
+                      title={`${roleLabel(title, lang)}: ${count}`}
                     />
                   ))}
                 </div>
