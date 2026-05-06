@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { useI18n } from "@/contexts/I18nContext";
-import { roleLabel } from "@/lib/labels";
+import { roleLabel, genderLabel } from "@/lib/labels";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -121,8 +121,8 @@ function CandidatesPage() {
         </h1>
         <p className="text-muted-foreground mt-1">
           {lang === "ar"
-            ? "كل المرشحين، مفروزون تلقائياً حسب الجنس والمنطقة."
-            : "All candidates, auto-sorted by gender and region."}
+            ? "كل المرشحين، مفروزون تلقائياً حسب نوع المدرسة والمنطقة."
+            : "All candidates, auto-sorted by school type and region."}
         </p>
       </div>
 
@@ -162,9 +162,7 @@ function CandidatesPage() {
             >
               {g === ""
                 ? lang === "ar" ? "الكل" : "All"
-                : g === "male"
-                  ? lang === "ar" ? "مدارس بنين" : "Boys school"
-                  : lang === "ar" ? "مدارس بنات" : "Girls school"}
+                : genderLabel(g, lang)}
             </button>
           ))}
         </div>
@@ -175,9 +173,7 @@ function CandidatesPage() {
           <Card key={g} className="glass shadow-elegant p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold">
-                {g === "male"
-                  ? lang === "ar" ? "مدارس بنين" : "Boys school"
-                  : lang === "ar" ? "مدارس بنات" : "Girls school"}
+                {genderLabel(g, lang)}
               </h2>
               <Badge variant="secondary">{byGender(g).length}</Badge>
             </div>
@@ -394,15 +390,15 @@ function EditDialog({
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label>{lang === "ar" ? "الجنس" : "Gender"}</Label>
+            <Label>{lang === "ar" ? "نوع المدرسة" : "School type"}</Label>
             <select
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={form.gender ?? ""}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
             >
               <option value="">—</option>
-              <option value="male">{lang === "ar" ? "ذكر" : "Male"}</option>
-              <option value="female">{lang === "ar" ? "أنثى" : "Female"}</option>
+              <option value="male">{lang === "ar" ? "مدارس بنين" : "Boys school"}</option>
+              <option value="female">{lang === "ar" ? "مدارس بنات" : "Girls school"}</option>
             </select>
           </div>
         </div>

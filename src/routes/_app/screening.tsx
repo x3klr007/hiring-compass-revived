@@ -590,30 +590,26 @@ function ScreeningPage() {
               : "Pick the school type to filter matching CVs. Use 'Auto / All' to include everyone without filtering."}
           </p>
           <div className="flex flex-wrap gap-2">
-            {([
-              { v: "any", ar: "تلقائي / الكل", en: "Auto / All" },
-              { v: "male", ar: "مدارس بنين", en: "Boys school" },
-              { v: "female", ar: "مدارس بنات", en: "Girls school" },
-            ] as const).map((opt) => (
+            {(["any", "male", "female"] as const).map((v) => (
               <button
-                key={opt.v}
+                key={v}
                 type="button"
-                onClick={() => setGenderFilter(opt.v)}
+                onClick={() => setGenderFilter(v)}
                 className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                  genderFilter === opt.v
+                  genderFilter === v
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-background hover:bg-muted"
                 }`}
               >
-                {lang === "ar" ? opt.ar : opt.en}
+                {genderLabel(v, lang)}
               </button>
             ))}
           </div>
           {genderFilter !== "any" && (
             <p className="text-xs text-muted-foreground">
               {lang === "ar"
-                ? `سيتم تجاهل السير الذاتية التي لا تناسب ${genderFilter === "male" ? "مدارس البنين" : "مدارس البنات"}.`
-                : `CVs that don't match ${genderFilter === "male" ? "boys schools" : "girls schools"} will be skipped.`}
+                ? `سيتم تجاهل السير الذاتية التي لا تناسب ${genderLabel(genderFilter, lang)}.`
+                : `CVs that don't match ${genderLabel(genderFilter, lang)} will be skipped.`}
             </p>
           )}
         </div>
@@ -673,7 +669,7 @@ function ScreeningPage() {
               {summary.filteredByGender ? (
                 <Badge variant="outline">
                   {summary.filteredByGender}{" "}
-                  {lang === "ar" ? "مستبعد بالجنس" : "filtered by gender"}
+                  {lang === "ar" ? "مستبعد حسب نوع المدرسة" : "filtered by school type"}
                 </Badge>
               ) : null}
             </div>
