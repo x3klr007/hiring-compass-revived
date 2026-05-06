@@ -536,35 +536,28 @@ function ScreeningPage() {
           <Label>{lang === "ar" ? "نوع المدرسة" : "School type"}</Label>
           <p className="text-xs text-muted-foreground">
             {lang === "ar"
-              ? "حدّد نوع المدرسة لتصفية السير الذاتية المناسبة لها. اختر «تلقائي» لترك النظام يقرر، أو «الكل» لتضمين الجميع."
-              : "Pick the school type to filter matching CVs. Use 'Auto' to let the system decide, or 'All' to include everyone."}
+              ? "حدّد نوع المدرسة لتصفية السير الذاتية المناسبة لها. اختر «تلقائي / الكل» لتضمين الجميع دون تصفية."
+              : "Pick the school type to filter matching CVs. Use 'Auto / All' to include everyone without filtering."}
           </p>
           <div className="flex flex-wrap gap-2">
             {([
-              { v: "any", ar: "تلقائي", en: "Auto" },
-              { v: "any", ar: "الكل", en: "All", asAll: true },
+              { v: "any", ar: "تلقائي / الكل", en: "Auto / All" },
               { v: "male", ar: "مدارس بنين", en: "Boys school" },
               { v: "female", ar: "مدارس بنات", en: "Girls school" },
-            ] as const).map((opt, i) => {
-              const active =
-                (opt as { asAll?: boolean }).asAll
-                  ? false // visual: only "Auto" lights up by default
-                  : genderFilter === opt.v && (i !== 1);
-              return (
-                <button
-                  key={`${opt.v}-${i}`}
-                  type="button"
-                  onClick={() => setGenderFilter(opt.v)}
-                  className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                    genderFilter === opt.v && ((opt as { asAll?: boolean }).asAll ? i === 1 : i !== 1) || active
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background hover:bg-muted"
-                  }`}
-                >
-                  {lang === "ar" ? opt.ar : opt.en}
-                </button>
-              );
-            })}
+            ] as const).map((opt) => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => setGenderFilter(opt.v)}
+                className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                  genderFilter === opt.v
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background hover:bg-muted"
+                }`}
+              >
+                {lang === "ar" ? opt.ar : opt.en}
+              </button>
+            ))}
           </div>
           {genderFilter !== "any" && (
             <p className="text-xs text-muted-foreground">
