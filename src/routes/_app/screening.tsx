@@ -480,21 +480,26 @@ function ScreeningPage() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>{lang === "ar" ? "الوظيفة الافتراضية (اختياري)" : "Default job (optional)"}</Label>
-            <select
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={defaultJobId}
-              onChange={(e) => setDefaultJobId(e.target.value)}
-            >
-              <option value="">
-                {lang === "ar" ? "— اقتراح الذكاء الاصطناعي —" : "— Let AI suggest —"}
-              </option>
-              {jobs.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.title} — {j.region}
-                </option>
+            <Label>{lang === "ar" ? "نوع الوظيفة" : "Role type"}</Label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setRoleType("")}
+                className={`px-3 py-1.5 rounded-full text-xs border transition ${roleType === "" ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
+              >
+                {lang === "ar" ? "تلقائي" : "Auto"}
+              </button>
+              {ROLE_TYPES.map((r) => (
+                <button
+                  key={r.v}
+                  type="button"
+                  onClick={() => setRoleType(r.v)}
+                  className={`px-3 py-1.5 rounded-full text-xs border transition ${roleType === r.v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
+                >
+                  {lang === "ar" ? r.ar : r.v}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div className="space-y-2">
             <Label>{t("region")} ({lang === "ar" ? "اختياري" : "optional"})</Label>
@@ -521,7 +526,7 @@ function ScreeningPage() {
         </div>
 
         <div className="space-y-2">
-          <Label>{lang === "ar" ? "الجنس (تصفية السير الذاتية)" : "Gender filter"}</Label>
+          <Label>{lang === "ar" ? "نوع المدرسة (الجنس)" : "School type (gender)"}</Label>
           <div className="flex flex-wrap gap-2">
             {([
               { v: "any", ar: "الكل", en: "All" },
