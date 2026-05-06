@@ -40,7 +40,14 @@ function ScreeningPage() {
   const ROLE_TYPES = [
     { v: "Stage Trainer", ar: "مدرب مراحل" },
     { v: "Expert Trainer", ar: "مدرب خبير" },
-    { v: "Central Admin", ar: "مشرف إداري" },
+    { v: "Admin Supervisor", ar: "مشرف إداري" },
+    { v: "Training Director", ar: "مدير التدريب (الإدارة الرئيسية)" },
+    { v: "HR Manager", ar: "مدير الموارد البشرية (الإدارة الرئيسية)" },
+    { v: "Operations Manager", ar: "مدير العمليات (الإدارة الرئيسية)" },
+    { v: "QA Manager", ar: "مدير ضمان الجودة (الإدارة الرئيسية)" },
+    { v: "IT Manager", ar: "مدير تقنية المعلومات (الإدارة الرئيسية)" },
+    { v: "Finance Manager", ar: "مدير المالية (الإدارة الرئيسية)" },
+    { v: "Recruitment Coordinator", ar: "منسق التوظيف (الإدارة الرئيسية)" },
   ];
   // Resolve to a concrete job id from (roleType, region). If multiple matches
   // exist, pick the first; if none, leave null and let the server auto-suggest.
