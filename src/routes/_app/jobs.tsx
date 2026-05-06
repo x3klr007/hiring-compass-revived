@@ -470,7 +470,7 @@ function JobsPage() {
                                     <Highlight text={j.job_code} match={debouncedSearch} />
                                   </td>
                                   <td className="px-4 py-2">
-                                    <Highlight text={j.title} match={debouncedSearch} />
+                                    <Highlight text={roleLabel(j.title, lang)} match={debouncedSearch} />
                                   </td>
                                   <td className="px-4 py-2">{j.headcount}</td>
                                   <td className="px-4 py-2">{j.hired_count}</td>
