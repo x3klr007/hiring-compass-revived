@@ -173,9 +173,7 @@ function CandidatesPage() {
           <Card key={g} className="glass shadow-elegant p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold">
-                {g === "male"
-                  ? lang === "ar" ? "مدارس بنين" : "Boys school"
-                  : lang === "ar" ? "مدارس بنات" : "Girls school"}
+                {genderLabel(g, lang)}
               </h2>
               <Badge variant="secondary">{byGender(g).length}</Badge>
             </div>
