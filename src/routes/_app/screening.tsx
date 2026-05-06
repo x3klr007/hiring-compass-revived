@@ -592,14 +592,10 @@ function ScreeningPage() {
 
         {(() => {
           const rl = roleType
-            ? (lang === "ar" ? (ROLE_TYPES.find((r) => r.v === roleType)?.ar ?? roleType) : roleType)
+            ? roleDisplay(roleType, ROLE_TYPES.find((r) => r.v === roleType)?.hq)
             : (lang === "ar" ? "تلقائي" : "Auto");
           const rg = defaultRegion ? regionLabel(defaultRegion, lang) : (lang === "ar" ? "تلقائي" : "Auto");
-          const sc = genderFilter === "any"
-            ? (lang === "ar" ? "تلقائي / الكل" : "Auto / All")
-            : genderFilter === "male"
-              ? (lang === "ar" ? "مدارس بنين" : "Boys school")
-              : (lang === "ar" ? "مدارس بنات" : "Girls school");
+          const sc = genderLabel(genderFilter, lang);
           return (
             <div className="rounded-lg border bg-muted/30 p-3">
               <div className="text-xs text-muted-foreground mb-2">
