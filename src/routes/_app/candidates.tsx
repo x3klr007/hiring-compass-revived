@@ -523,6 +523,11 @@ function MoveDialog({
   );
 }
 
+type CandidatesSearch = { stage?: string };
+
 export const Route = createFileRoute("/_app/candidates")({
   component: CandidatesPage,
+  validateSearch: (raw: Record<string, unknown>): CandidatesSearch => ({
+    stage: typeof raw.stage === "string" && raw.stage ? raw.stage : undefined,
+  }),
 });
