@@ -128,6 +128,22 @@ function CandidatesPage() {
         </p>
       </div>
 
+      {stageFilter && (
+        <Card className="glass p-3 flex items-center justify-between gap-3">
+          <div className="text-sm">
+            {lang === "ar" ? "مفلتر حسب المرحلة:" : "Filtered by stage:"}{" "}
+            <Badge variant="secondary">{stageFilter}</Badge>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate({ to: "/candidates", search: {} })}
+          >
+            {lang === "ar" ? "مسح الفلتر" : "Clear filter"}
+          </Button>
+        </Card>
+      )}
+
       <Card className="glass shadow-elegant p-4 space-y-4">
         <div className="flex flex-wrap gap-2">
           <button
