@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Users, MapPin, Building2, TrendingUp, X, Download, Settings2, CheckCircle2, Clock, Target } from "lucide-react";
+import { Briefcase, Users, MapPin, Building2, TrendingUp, X, Download, Settings2, CheckCircle2, Clock, Target, UserCheck } from "lucide-react";
 import { exportDashboardPdf } from "@/lib/exportDashboardPdf";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
