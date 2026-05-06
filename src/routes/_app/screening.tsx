@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuthedServerFn } from "@/hooks/useAuthedServerFn";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -85,15 +85,28 @@ function ScreeningPage() {
     () => ((typeof window !== "undefined" && (localStorage.getItem("screening.gender") as "any" | "male" | "female")) || "any"),
   );
 
+  const savedToast = (labelAr: string, labelEn: string) => {
+    toast.success(
+      lang === "ar" ? `تم حفظ ${labelAr}` : `${labelEn} saved`,
+      { duration: 1500 },
+    );
+  };
+  const firstMount = useRef(true);
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("screening.roleType", roleType);
+    if (!firstMount.current) savedToast("نوع الوظيفة", "Job type");
   }, [roleType]);
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("screening.region", defaultRegion);
+    if (!firstMount.current) savedToast("المنطقة", "Region");
   }, [defaultRegion]);
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("screening.gender", genderFilter);
+    if (!firstMount.current) savedToast("نوع المدرسة", "School type");
   }, [genderFilter]);
+  useEffect(() => {
+    firstMount.current = false;
+  }, []);
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<IngestResult[]>([]);
   const [summary, setSummary] = useState<{ total: number; skipped: number; filteredByGender?: number } | null>(null);
