@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Link2, Loader2, CheckCircle2, AlertCircle, Folder } from "lucide-react";
+import { Sparkles, Link2, Loader2, CheckCircle2, AlertCircle, Folder, RotateCcw } from "lucide-react";
 import { ingestFromDriveLink, checkDriveHealth, type IngestResult } from "@/server/cv-ingest.functions";
 import { REGIONS, regionLabel } from "@/lib/regions";
 import { roleLabel, genderLabel } from "@/lib/labels";
@@ -635,9 +635,36 @@ function ScreeningPage() {
           const rg = defaultRegion ? regionLabel(defaultRegion, lang) : (lang === "ar" ? "كل المناطق" : "All regions");
           const sc = genderLabel(genderFilter, lang);
           return (
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <div className="text-xs text-muted-foreground mb-2">
-                {lang === "ar" ? "ملخص التصفية قبل التشغيل" : "Filter summary before running"}
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">
+                  {lang === "ar" ? "ملخص التصفية قبل التشغيل" : "Filter summary before running"}
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => {
+                    setRoleType("");
+                    setDefaultRegion("");
+                    setGenderFilter("any");
+                    setRoleGroup("training");
+                    if (typeof window !== "undefined") {
+                      localStorage.removeItem("screening.roleType");
+                      localStorage.removeItem("screening.region");
+                      localStorage.removeItem("screening.gender");
+                      localStorage.removeItem("screening.roleGroup");
+                    }
+                    toast.success(
+                      lang === "ar" ? "تمت إعادة ضبط خيارات الفحص" : "Screening filters reset",
+                      { duration: 1500 },
+                    );
+                  }}
+                >
+                  <RotateCcw className="h-3.5 w-3.5 me-1" />
+                  {lang === "ar" ? "إعادة الضبط" : "Reset"}
+                </Button>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge variant="outline">{lang === "ar" ? "الوظيفة:" : "Role:"} <span className="ms-1 font-semibold">{rl}</span></Badge>
