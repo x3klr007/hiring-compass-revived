@@ -395,23 +395,37 @@ function Dashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map(({ label, value, icon: Icon, sub, tone }) => (
-          <Card key={label} className="glass shadow-elegant">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-              <div
-                className="h-8 w-8 rounded-lg flex items-center justify-center"
-                style={{ background: `color-mix(in oklab, var(--${tone}) 20%, transparent)` }}
-              >
-                <Icon className="h-4 w-4" style={{ color: `var(--${tone})` }} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{value}</div>
-              <div className="text-xs text-muted-foreground mt-1">{sub}</div>
-            </CardContent>
-          </Card>
-        ))}
+        {kpis.map(({ label, value, icon: Icon, sub, tone, link }) => {
+          const inner = (
+            <Card className={`glass shadow-elegant h-full ${link ? "cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5" : ""}`}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+                <div
+                  className="h-8 w-8 rounded-lg flex items-center justify-center"
+                  style={{ background: `color-mix(in oklab, var(--${tone}) 20%, transparent)` }}
+                >
+                  <Icon className="h-4 w-4" style={{ color: `var(--${tone})` }} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{value}</div>
+                <div className="text-xs text-muted-foreground mt-1">{sub}</div>
+              </CardContent>
+            </Card>
+          );
+          return link ? (
+            <Link
+              key={label}
+              to={link.to}
+              search={link.search as never}
+              className="block"
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div key={label}>{inner}</div>
+          );
+        })}
       </div>
 
       {/* Two columns: Regional + Role distribution */}
