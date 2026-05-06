@@ -162,9 +162,7 @@ function CandidatesPage() {
             >
               {g === ""
                 ? lang === "ar" ? "الكل" : "All"
-                : g === "male"
-                  ? lang === "ar" ? "مدارس بنين" : "Boys school"
-                  : lang === "ar" ? "مدارس بنات" : "Girls school"}
+                : genderLabel(g, lang)}
             </button>
           ))}
         </div>
