@@ -524,7 +524,7 @@ function ScreeningPage() {
                   onClick={() => setRoleType(r.v)}
                   className={`px-3 py-1.5 rounded-full text-xs border transition ${roleType === r.v ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
                 >
-                  {lang === "ar" ? r.ar : r.v}
+                  {roleDisplay(r.v, r.hq)}
                 </button>
               ))}
             </div>
