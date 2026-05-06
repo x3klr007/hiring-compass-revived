@@ -163,8 +163,8 @@ function CandidatesPage() {
               {g === ""
                 ? lang === "ar" ? "الكل" : "All"
                 : g === "male"
-                  ? lang === "ar" ? "بنين" : "Boys"
-                  : lang === "ar" ? "بنات" : "Girls"}
+                  ? lang === "ar" ? "مدارس بنين" : "Boys school"
+                  : lang === "ar" ? "مدارس بنات" : "Girls school"}
             </button>
           ))}
         </div>
