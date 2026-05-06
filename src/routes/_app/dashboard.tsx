@@ -54,6 +54,15 @@ function Dashboard() {
     },
   });
 
+  const { data: candidates = [] } = useQuery({
+    queryKey: ["candidates", "dashboard"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("candidates").select("id,stage,job_id");
+      if (error) throw error;
+      return data as { id: string; stage: string; job_id: string | null }[];
+    },
+  });
+
   const [regionFilter, setRegionFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
 
