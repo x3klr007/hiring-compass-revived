@@ -619,7 +619,7 @@ function ScreeningPage() {
           const rl = roleType
             ? roleDisplay(roleType)
             : (lang === "ar" ? "تلقائي" : "Auto");
-          const rg = defaultRegion ? regionLabel(defaultRegion, lang) : (lang === "ar" ? "تلقائي" : "Auto");
+          const rg = defaultRegion ? regionLabel(defaultRegion, lang) : (lang === "ar" ? "كل المناطق" : "All regions");
           const sc = genderLabel(genderFilter, lang);
           return (
             <div className="rounded-lg border bg-muted/30 p-3">
