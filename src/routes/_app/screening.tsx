@@ -35,8 +35,23 @@ function ScreeningPage() {
   const healthCheck = useAuthedServerFn(checkDriveHealth);
   const [link, setLink] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [defaultJobId, setDefaultJobId] = useState<string>("");
+  const [roleType, setRoleType] = useState<string>("");
   const [defaultRegion, setDefaultRegion] = useState<string>("");
+  const ROLE_TYPES = [
+    { v: "Stage Trainer", ar: "مدرب مراحل" },
+    { v: "Expert Trainer", ar: "مدرب خبير" },
+    { v: "Central Admin", ar: "مشرف إداري" },
+  ];
+  // Resolve to a concrete job id from (roleType, region). If multiple matches
+  // exist, pick the first; if none, leave null and let the server auto-suggest.
+  const defaultJobId = (() => {
+    if (!roleType) return "";
+    const matches = jobs.filter(
+      (j) => j.title.toLowerCase().trim() === roleType.toLowerCase().trim() &&
+        (!defaultRegion || j.region === defaultRegion),
+    );
+    return matches[0]?.id ?? "";
+  })();
   const [genderFilter, setGenderFilter] = useState<"any" | "male" | "female">("any");
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<IngestResult[]>([]);
