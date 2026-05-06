@@ -35,8 +35,12 @@ function ScreeningPage() {
   const healthCheck = useAuthedServerFn(checkDriveHealth);
   const [link, setLink] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [roleType, setRoleType] = useState<string>("");
-  const [defaultRegion, setDefaultRegion] = useState<string>("");
+  const [roleType, setRoleType] = useState<string>(
+    () => (typeof window !== "undefined" && localStorage.getItem("screening.roleType")) || "",
+  );
+  const [defaultRegion, setDefaultRegion] = useState<string>(
+    () => (typeof window !== "undefined" && localStorage.getItem("screening.region")) || "",
+  );
   const ROLE_TYPES = [
     { v: "Stage Trainer", ar: "مدرب مراحل" },
     { v: "Expert Trainer", ar: "مدرب خبير" },
