@@ -126,7 +126,7 @@ function JobsPage() {
     return allJobs.filter((j) => {
       if (statuses.size && !statuses.has(j.status)) return false;
       if (debouncedSearch) {
-        const hay = `${j.title} ${j.job_code}`.toLowerCase();
+        const hay = `${j.title} ${roleLabel(j.title, "en")} ${roleLabel(j.title, "ar")} ${j.job_code}`.toLowerCase();
         if (!hay.includes(debouncedSearch)) return false;
       }
       return true;
