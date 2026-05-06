@@ -153,6 +153,7 @@ function Dashboard() {
     ? Math.round((stats.totalHired / stats.totalHeadcount) * 100)
     : 0;
 
+  type KpiLink = { to: "/jobs"; search?: { status?: string[] } } | { to: "/candidates"; search?: { stage?: string } };
   const ALL_KPIS = useMemo(
     () => [
       {
@@ -162,14 +163,16 @@ function Dashboard() {
         icon: Briefcase,
         sub: `${stats.open} ${ar ? "مفتوح" : "open"}`,
         tone: "primary",
+        link: { to: "/jobs" } as KpiLink,
       },
       {
         id: "candidates",
         label: ar ? "المرشحون" : t("totalCandidates"),
-        value: 0,
+        value: stats.totalCandidates,
         icon: Users,
-        sub: ar ? "لا يوجد بعد" : "none yet",
+        sub: `${stats.interview} ${ar ? "قيد المقابلة" : "in interview"}`,
         tone: "accent",
+        link: { to: "/candidates" } as KpiLink,
       },
       {
         id: "regions",
@@ -186,14 +189,25 @@ function Dashboard() {
         icon: Clock,
         sub: ar ? "قيد التوظيف" : "in progress",
         tone: "warning",
+        link: { to: "/jobs", search: { status: ["Open"] } } as KpiLink,
+      },
+      {
+        id: "interview",
+        label: ar ? "قيد المقابلة" : "In Interview",
+        value: stats.interview,
+        icon: UserCheck,
+        sub: ar ? "مرشحون" : "candidates",
+        tone: "warning",
+        link: { to: "/candidates", search: { stage: "Interview" } } as KpiLink,
       },
       {
         id: "hired",
         label: ar ? "تم التوظيف" : "Hired",
         value: stats.totalHired,
         icon: CheckCircle2,
-        sub: `${stats.totalHeadcount - stats.totalHired} ${ar ? "متبقي" : "remaining"}`,
+        sub: `${Math.max(0, stats.totalHeadcount - stats.totalHired)} ${ar ? "متبقي" : "remaining"}`,
         tone: "success",
+        link: { to: "/candidates", search: { stage: "Hired" } } as KpiLink,
       },
       {
         id: "branches",
