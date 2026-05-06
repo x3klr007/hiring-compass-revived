@@ -61,7 +61,7 @@ const REGION_ORDER = [
   "Riyadh", "Jeddah", "Qassim", "Eastern Province", "Madinah",
   "Hail", "Abha", "Al-Ahsa", "Makkah", "Jazan",
 ];
-const BRANCH_ORDER = ["Headquarters", "Boys School", "Girls School"];
+const BRANCH_ORDER = ["Head Office", "Boys School", "Girls School"];
 
 const STATUS_OPTIONS = ["Open", "Filled", "On Hold"];
 
@@ -529,8 +529,8 @@ function JobDetailsDialog({
   }, [candidates]);
 
   const classification =
-    job?.branch === "Headquarters"
-      ? "Central Admin"
+    job?.branch === "Head Office" || job?.branch === "Headquarters"
+      ? "Head Office"
       : ["Riyadh", "Jeddah", "Qassim", "Eastern Province", "Madinah"].includes(job?.region ?? "")
         ? "Existing Branch"
         : "New Branch";
@@ -714,7 +714,7 @@ function labelForSort(sortBy: string, t: (k: any) => string) {
 
 function BranchIcon({ branch }: { branch: string }) {
   const emoji =
-    branch === "Headquarters" ? "🏛️" : branch === "Girls School" ? "👩‍🏫" : branch === "Boys School" ? "👨‍🏫" : "📍";
+    branch === "Head Office" || branch === "Headquarters" ? "🏛️" : branch === "Girls School" ? "👩‍🏫" : branch === "Boys School" ? "👨‍🏫" : "📍";
   return <span aria-hidden>{emoji}</span>;
 }
 

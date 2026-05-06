@@ -15,7 +15,7 @@ const REGION_ORDER = [
   "Riyadh", "Jeddah", "Qassim", "Eastern Province", "Madinah",
   "Hail", "Abha", "Al-Ahsa", "Makkah", "Jazan",
 ];
-const BRANCH_ORDER = ["Headquarters", "Boys School", "Girls School"];
+const BRANCH_ORDER = ["Head Office", "Boys School", "Girls School"];
 const EXISTING = new Set(["Riyadh", "Jeddah", "Qassim", "Eastern Province", "Madinah"]);
 
 const FILLS = {
@@ -28,12 +28,12 @@ const FILLS = {
 };
 
 function branchClassification(region: string, branch: string) {
-  if (branch === "Headquarters") return "Central Admin";
+  if (branch === "Head Office" || branch === "Headquarters") return "Head Office";
   return EXISTING.has(region) ? "Existing Branch" : "New Branch";
 }
 
 function rowFill(branch: string) {
-  if (branch === "Headquarters") return FILLS.hq;
+  if (branch === "Head Office" || branch === "Headquarters") return FILLS.hq;
   if (branch === "Girls School") return FILLS.girls;
   return FILLS.boys;
 }
@@ -117,7 +117,7 @@ export async function exportJobsToXlsx(jobs: ExportJob[]) {
       idx + 1,
       j.region,
       j.branch,
-      j.branch === "Headquarters" ? "-" : "All Stages",
+      j.branch === "Head Office" || j.branch === "Headquarters" ? "-" : "All Stages",
       j.title,
       "Full-time",
       j.headcount,

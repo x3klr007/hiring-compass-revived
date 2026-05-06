@@ -42,25 +42,17 @@ function ScreeningPage() {
   const [defaultRegion, setDefaultRegion] = useState<string>(
     () => (typeof window !== "undefined" && localStorage.getItem("screening.region")) || "",
   );
-  const HQ_SUFFIX_AR = " — الإدارة الرئيسية";
-  const HQ_SUFFIX_EN = " — HQ";
   type RoleGroup = "training" | "supervision" | "hq";
   const ROLE_TYPES: Array<{ v: string; group: RoleGroup }> = [
-    { v: "Stage Trainer", group: "training" },
+    { v: "Trainer", group: "training" },
     { v: "Expert Trainer", group: "training" },
     { v: "Admin Supervisor", group: "supervision" },
-    { v: "Training Director", group: "hq" },
-    { v: "HR Manager", group: "hq" },
-    { v: "Operations Manager", group: "hq" },
-    { v: "QA Manager", group: "hq" },
-    { v: "IT Manager", group: "hq" },
-    { v: "Finance Manager", group: "hq" },
-    { v: "Recruitment Coordinator", group: "hq" },
+    { v: "Head Office", group: "hq" },
   ];
   const ROLE_GROUPS: Array<{ id: RoleGroup; ar: string; en: string }> = [
     { id: "training", ar: "تدريب", en: "Training" },
     { id: "supervision", ar: "إشراف", en: "Supervision" },
-    { id: "hq", ar: "إدارة رئيسية", en: "Headquarters" },
+    { id: "hq", ar: "الإدارة الرئيسية", en: "Head Office" },
   ];
   const [roleGroup, setRoleGroup] = useState<RoleGroup>(() => {
     if (typeof window === "undefined") return "training";

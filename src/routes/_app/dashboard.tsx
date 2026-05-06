@@ -36,9 +36,9 @@ const REGION_ORDER = [
 
 const ROLE_COLORS: Record<string, string> = {
   "Expert Trainer": "var(--primary)",
-  "Stage Trainer": "var(--primary-glow)",
+  "Trainer": "var(--primary-glow)",
   "Admin Supervisor": "var(--success)",
-  "Central Admin": "var(--warning)",
+  "Head Office": "var(--warning)",
 };
 
 function Dashboard() {
