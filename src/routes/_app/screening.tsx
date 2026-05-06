@@ -709,7 +709,7 @@ function ScreeningPage() {
             </div>
           </div>
           <div className="space-y-2">
-            {results.map((r, i) => (
+            {visible.map((r, i) => (
               <div
                 key={i}
                 className="flex items-start gap-3 rounded-lg border bg-card/50 p-3 text-sm"
@@ -749,7 +749,8 @@ function ScreeningPage() {
             ))}
           </div>
         </Card>
-      )}
+        );
+      })()}
     </div>
   );
 }
