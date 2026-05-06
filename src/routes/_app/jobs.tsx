@@ -502,6 +502,7 @@ function JobsPage() {
 function JobDetailsDialog({
   job, onClose, ar, t,
 }: { job: Job | null; onClose: () => void; ar: boolean; t: (k: any) => string }) {
+  const lang: "ar" | "en" = ar ? "ar" : "en";
   const { data: candidates } = useQuery({
     queryKey: ["job-candidates", job?.id],
     enabled: !!job,
