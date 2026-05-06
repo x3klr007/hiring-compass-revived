@@ -533,12 +533,17 @@ function ScreeningPage() {
         </div>
 
         <div className="space-y-2">
-          <Label>{lang === "ar" ? "نوع المدرسة (الجنس)" : "School type (gender)"}</Label>
+          <Label>{lang === "ar" ? "نوع المدرسة" : "School type"}</Label>
+          <p className="text-xs text-muted-foreground">
+            {lang === "ar"
+              ? "حدّد نوع المدرسة لتصفية السير الذاتية المناسبة لها. اختر «تلقائي / الكل» لتضمين الجميع دون تصفية."
+              : "Pick the school type to filter matching CVs. Use 'Auto / All' to include everyone without filtering."}
+          </p>
           <div className="flex flex-wrap gap-2">
             {([
-              { v: "any", ar: "الكل", en: "All" },
-              { v: "male", ar: "بنين", en: "Boys school" },
-              { v: "female", ar: "بنات", en: "Girls school" },
+              { v: "any", ar: "تلقائي / الكل", en: "Auto / All" },
+              { v: "male", ar: "مدارس بنين", en: "Boys school" },
+              { v: "female", ar: "مدارس بنات", en: "Girls school" },
             ] as const).map((opt) => (
               <button
                 key={opt.v}
@@ -557,8 +562,8 @@ function ScreeningPage() {
           {genderFilter !== "any" && (
             <p className="text-xs text-muted-foreground">
               {lang === "ar"
-                ? "سيتم تجاهل السير الذاتية التي لا تطابق الجنس المختار."
-                : "CVs that don't match the selected gender will be skipped."}
+                ? `سيتم تجاهل السير الذاتية التي لا تناسب ${genderFilter === "male" ? "مدارس البنين" : "مدارس البنات"}.`
+                : `CVs that don't match ${genderFilter === "male" ? "boys schools" : "girls schools"} will be skipped.`}
             </p>
           )}
         </div>
