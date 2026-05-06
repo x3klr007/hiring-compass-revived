@@ -397,12 +397,12 @@ function JobsPage() {
                               <Highlight text={j.job_code} match={debouncedSearch} />
                             </td>
                             <td className="px-4 py-2">
-                              <Highlight text={j.title} match={debouncedSearch} />
+                              <Highlight text={roleLabel(j.title, lang)} match={debouncedSearch} />
                             </td>
                             <td className="px-4 py-2">{j.region}</td>
                             <td className="px-4 py-2">
                               <span className="inline-flex items-center gap-1.5">
-                                <BranchIcon branch={j.branch} /> {j.branch}
+                                <BranchIcon branch={j.branch} /> {branchLabel(j.branch, lang)}
                               </span>
                             </td>
                             <td className="px-4 py-2 text-end tabular-nums">{j.headcount}</td>
